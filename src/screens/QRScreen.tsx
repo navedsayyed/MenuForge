@@ -260,6 +260,33 @@ const QRScreen: React.FC<Props> = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Bottom Navigation Bar */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity
+          style={styles.navButton}
+          onPress={() => navigation.navigate('Dashboard')}
+        >
+          <Text style={styles.navIcon}>🏠</Text>
+          <Text style={styles.navLabel}>Dashboard</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.navButton, styles.navButtonActive]}
+          onPress={() => {}}
+        >
+          <Text style={styles.navIconActive}>📱</Text>
+          <Text style={styles.navLabelActive}>Generate QR</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.navButton}
+          onPress={() => Alert.alert('Profile', 'Profile screen coming soon!')}
+        >
+          <Text style={styles.navIcon}>👤</Text>
+          <Text style={styles.navLabel}>Profile</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -512,6 +539,50 @@ const styles = StyleSheet.create({
   printUrlText: {
     fontSize: 12,
     color: '#7F8C8D'
+  },
+  // Bottom Navigation Styles
+  bottomNav: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+    paddingVertical: 8,
+    paddingBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 4
+  },
+  navButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6
+  },
+  navButtonActive: {
+    borderTopWidth: 2,
+    borderTopColor: '#FF6B6B'
+  },
+  navIcon: {
+    fontSize: 22,
+    marginBottom: 2,
+    opacity: 0.5
+  },
+  navIconActive: {
+    fontSize: 22,
+    marginBottom: 2,
+    opacity: 1
+  },
+  navLabel: {
+    fontSize: 11,
+    color: '#95A5A6',
+    fontWeight: '500'
+  },
+  navLabelActive: {
+    fontSize: 11,
+    color: '#FF6B6B',
+    fontWeight: '600'
   }
 });
 
