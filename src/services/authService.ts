@@ -20,22 +20,18 @@ const authService = {
       // Create email session (auto login)
       await account.createEmailSession(email, password);
 
-      // Create restaurant document
-      const restaurantId = ID.unique();
+      // Create restaurant document matching Appwrite collection structure
+      const restaurantId = user.$id; // Use userId as restaurantId for linking
       const restaurant = await databases.createDocument(
         APPWRITE_CONFIG.databaseId,
         APPWRITE_CONFIG.restaurantsCollectionId,
         restaurantId,
         {
-          name: name,
-          email: email,
-          userId: user.$id,
-          address: '',
-          phoneNumber: '',
-          operatingHours: '',
-          description: '',
-          logo: '',
-          createdAt: new Date().toISOString()
+          address: 'Not specified',
+          phoneNumber: 'Not specified',
+          operatingHours: 'Not specified',
+          cuisineType: '',
+          priceRange: ''
         }
       );
 
@@ -45,7 +41,7 @@ const authService = {
         email: user.email,
         name: user.name,
         restaurantId: restaurant.$id,
-        restaurantName: restaurant.name
+        restaurantName: user.name
       };
 
       await AsyncStorage.setItem('userData', JSON.stringify(userData));
@@ -81,26 +77,22 @@ const authService = {
         APPWRITE_CONFIG.restaurantsCollectionId
       );
 
-      // Find restaurant by userId
-      let restaurant = restaurants.documents.find((r: any) => r.userId === user.$id);
+      // Find restaurant by ID (we use userId as restaurantId)
+      let restaurant = restaurants.documents.find((r: any) => r.$id === user.$id);
 
-      // If not found, create restaurant record
+      // If not found, create restaurant record matching collection structure
       if (!restaurant) {
-        const restaurantId = ID.unique();
+        const restaurantId = user.$id; // Use userId as restaurantId for linking
         restaurant = await databases.createDocument(
           APPWRITE_CONFIG.databaseId,
           APPWRITE_CONFIG.restaurantsCollectionId,
           restaurantId,
           {
-            name: user.name,
-            email: user.email,
-            userId: user.$id,
-            address: '',
-            phoneNumber: '',
-            operatingHours: '',
-            description: '',
-            logo: '',
-            createdAt: new Date().toISOString()
+            address: 'Not specified',
+            phoneNumber: 'Not specified',
+            operatingHours: 'Not specified',
+            cuisineType: '',
+            priceRange: ''
           }
         );
       }
@@ -111,7 +103,7 @@ const authService = {
         email: user.email,
         name: user.name,
         restaurantId: restaurant.$id,
-        restaurantName: restaurant.name
+        restaurantName: user.name
       };
 
       await AsyncStorage.setItem('userData', JSON.stringify(userData));

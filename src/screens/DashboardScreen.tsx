@@ -87,7 +87,7 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await dishService.deleteDish(dish.$id, dish.images);
+              await dishService.deleteDish(dish.$id, dish.images ? [dish.images] : []);
               Alert.alert('Success', 'Dish deleted successfully');
               fetchDishes();
             } catch (error) {
@@ -133,9 +133,8 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const renderDishCard = ({ item }: { item: Dish }) => {
-    const imageUrl = item.images && item.images.length > 0 
-      ? getImageUrl(item.images[0]) 
-      : null;
+    // images is stored as a single URL string in the database
+    const imageUrl = item.images || null;
 
     return (
       <View style={styles.dishCard}>

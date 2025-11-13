@@ -15,7 +15,7 @@ export interface Dish {
   description: string;
   price: number;
   category: string;
-  images: string[];
+  images: string; // Single image URL stored in Appwrite
   isAvailable: boolean;
   createdAt: string;
 }

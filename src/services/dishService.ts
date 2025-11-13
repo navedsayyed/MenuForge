@@ -14,27 +14,33 @@ const dishService = {
   async addDish(restaurantId: string, dishData: DishFormData, images: string[]): Promise<Dish> {
     try {
       const dishId = ID.unique();
+      console.log('Creating dish with ID:', dishId);
 
       // Upload images to Appwrite Storage
       const imageUrls = await uploadImages(restaurantId, dishId, images);
+      console.log('Images uploaded, URLs:', imageUrls);
+
+      // Prepare dish data
+      const dishDocumentData = {
+        restaurantId: restaurantId,
+        name: dishData.name,
+        description: dishData.description,
+        price: parseFloat(dishData.price.toString()),
+        category: dishData.category,
+        images: imageUrls[0] || '' // Use first image URL only
+      };
+      
+      console.log('Creating dish document with data:', dishDocumentData);
 
       // Create dish document in database
       const dish = await databases.createDocument(
         APPWRITE_CONFIG.databaseId,
         APPWRITE_CONFIG.dishesCollectionId,
         dishId,
-        {
-          restaurantId: restaurantId,
-          name: dishData.name,
-          description: dishData.description,
-          price: parseFloat(dishData.price.toString()),
-          category: dishData.category,
-          images: imageUrls,
-          isAvailable: dishData.isAvailable !== undefined ? dishData.isAvailable : true,
-          createdAt: new Date().toISOString()
-        }
+        dishDocumentData
       );
 
+      console.log('Dish created successfully:', dish.$id);
       return dish as unknown as Dish;
     } catch (error: any) {
       console.error('Add dish error:', error);
@@ -52,7 +58,7 @@ const dishService = {
         APPWRITE_CONFIG.dishesCollectionId,
         [
           Query.equal('restaurantId', restaurantId),
-          Query.orderDesc('createdAt'),
+          Query.orderDesc('$createdAt'),
           Query.limit(100)
         ]
       );
@@ -113,8 +119,7 @@ const dishService = {
           description: dishData.description,
           price: parseFloat(dishData.price.toString()),
           category: dishData.category,
-          images: allImageUrls,
-          isAvailable: dishData.isAvailable !== undefined ? dishData.isAvailable : true
+          images: allImageUrls[0] || '' // Use first image URL only
         }
       );
 
@@ -150,24 +155,13 @@ const dishService = {
   },
 
   /**
-   * Toggle dish availability
+   * Toggle dish availability (disabled - not supported by collection)
    */
   async toggleAvailability(dishId: string, isAvailable: boolean): Promise<Dish> {
-    try {
-      const updatedDish = await databases.updateDocument(
-        APPWRITE_CONFIG.databaseId,
-        APPWRITE_CONFIG.dishesCollectionId,
-        dishId,
-        {
-          isAvailable: isAvailable
-        }
-      );
-
-      return updatedDish as unknown as Dish;
-    } catch (error: any) {
-      console.error('Toggle availability error:', error);
-      throw new Error(error.message || 'Failed to update availability');
-    }
+    // Note: isAvailable field doesn't exist in the dishes collection
+    // This function is disabled but kept for backward compatibility
+    console.warn('toggleAvailability is not supported - isAvailable field does not exist in collection');
+    return this.getDishById(dishId);
   },
 
   /**

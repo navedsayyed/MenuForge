@@ -36,7 +36,7 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
   const [description, setDescription] = useState(dish.description);
   const [price, setPrice] = useState(dish.price.toString());
   const [category, setCategory] = useState<Category>(dish.category as Category);
-  const [existingImages, setExistingImages] = useState<string[]>(dish.images || []);
+  const [existingImages, setExistingImages] = useState<string[]>(dish.images ? [dish.images] : []);
   const [newImages, setNewImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -59,7 +59,6 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
 
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
         quality: 0.8,
         aspect: [4, 3]
@@ -93,7 +92,6 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
 
     try {
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         quality: 0.8,
         aspect: [4, 3]
       });
