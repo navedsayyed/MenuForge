@@ -50,6 +50,14 @@
         {
           "cameraPermission": "Allow Restaurant Admin to use the camera to take dish photos."
         }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow Restaurant Admin to save menu images to your gallery.",
+          "savePhotosPermission": "Allow Restaurant Admin to save menu images to your gallery.",
+          "isAccessMediaLocationEnabled": true
+        }
       ]
     ]
   }

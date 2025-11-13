@@ -1,8 +1,12 @@
 // src/screens/QRScreen.tsx
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useEffect, useState } from 'react';
+import * as MediaLibrary from 'expo-media-library';
+import * as Sharing from 'expo-sharing';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+    ActivityIndicator,
     Alert,
+    Image,
     ScrollView,
     StatusBar,
     StyleSheet,
@@ -10,8 +14,11 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
+import ViewShot from 'react-native-view-shot';
 import authService from '../services/authService';
-import { User } from '../types';
+import dishService from '../services/dishService';
+import { Dish, User } from '../types';
 import { RootStackParamList } from '../types/navigation';
 
 type QRScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'QR'>;
@@ -23,10 +30,21 @@ interface Props {
 const QRScreen: React.FC<Props> = ({ navigation }) => {
   const [userData, setUserData] = useState<User | null>(null);
   const [menuUrl, setMenuUrl] = useState('');
+  const [dishes, setDishes] = useState<Dish[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const viewShotRef = useRef<ViewShot>(null);
+  const qrRef = useRef<any>(null);
 
   useEffect(() => {
     loadUserData();
   }, []);
+
+  useEffect(() => {
+    if (userData) {
+      fetchDishes();
+    }
+  }, [userData]);
 
   const loadUserData = async () => {
     try {
@@ -44,14 +62,78 @@ const QRScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
+  const fetchDishes = async () => {
+    if (!userData) return;
+    
+    try {
+      setLoading(true);
+      const fetchedDishes = await dishService.getDishes(userData.restaurantId);
+      setDishes(fetchedDishes);
+    } catch (error) {
+      console.error('Fetch dishes error:', error);
+      Alert.alert('Error', 'Failed to load dishes');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCopyUrl = () => {
     Alert.alert('Info', `Menu URL: ${menuUrl}`);
+  };
+
+  const handleDownloadMenu = async () => {
+    try {
+      setGenerating(true);
+      
+      // Capture the view as image
+      if (viewShotRef.current && viewShotRef.current.capture) {
+        const uri = await viewShotRef.current.capture();
+        
+        // Use sharing API which works with Expo Go
+        const canShare = await Sharing.isAvailableAsync();
+        if (canShare) {
+          await Sharing.shareAsync(uri, {
+            mimeType: 'image/jpeg',
+            dialogTitle: 'Save or Share Menu',
+            UTI: 'public.jpeg'
+          });
+          Alert.alert('Success', 'Menu image has been prepared for saving/sharing!');
+        } else {
+          Alert.alert('Error', 'Sharing is not available on this device');
+        }
+      }
+    } catch (error: any) {
+      console.error('Download menu error:', error);
+      Alert.alert('Error', `Failed to generate menu: ${error.message}`);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleShareMenu = async (uri?: string) => {
+    try {
+      let imageUri = uri;
+      
+      if (!imageUri && viewShotRef.current && viewShotRef.current.capture) {
+        imageUri = await viewShotRef.current.capture();
+      }
+      
+      if (imageUri) {
+        await Sharing.shareAsync(imageUri, {
+          mimeType: 'image/jpeg',
+          dialogTitle: 'Share Menu'
+        });
+      }
+    } catch (error: any) {
+      console.error('Share menu error:', error);
+      Alert.alert('Error', `Failed to share menu: ${error.message}`);
+    }
   };
 
   if (!userData) {
     return (
       <View style={styles.loadingContainer}>
-        <Text>Loading...</Text>
+        <ActivityIndicator size="large" color="#FF6B6B" />
       </View>
     );
   }
@@ -67,38 +149,112 @@ const QRScreen: React.FC<Props> = ({ navigation }) => {
         >
           <Text style={styles.backButtonText}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Menu QR Code</Text>
+        <Text style={styles.headerTitle}>Menu & QR Code</Text>
         <View style={styles.backButton} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.infoCard}>
-          <Text style={styles.restaurantName}>{userData.restaurantName}</Text>
-          <Text style={styles.infoText}>
-            Share this QR code with your customers to let them view your menu
-          </Text>
-        </View>
-
-        <View style={styles.qrContainer}>
-          <View style={styles.qrPlaceholder}>
-            <Text style={styles.qrPlaceholderText}>📱</Text>
-            <Text style={styles.qrPlaceholderLabel}>QR Code</Text>
+        {/* Printable Menu View */}
+        <ViewShot 
+          ref={viewShotRef} 
+          options={{ format: 'jpg', quality: 1.0 }}
+          style={styles.menuPrintView}
+        >
+          {/* Restaurant Header */}
+          <View style={styles.printHeader}>
+            <Text style={styles.printRestaurantName}>{userData.restaurantName}</Text>
+            <Text style={styles.printTagline}>Our Menu</Text>
+            <View style={styles.printDivider} />
           </View>
-          <Text style={styles.qrLabel}>Scan to view menu</Text>
-        </View>
 
-        <View style={styles.urlCard}>
-          <Text style={styles.urlLabel}>Menu URL</Text>
-          <View style={styles.urlContainer}>
-            <Text style={styles.urlText} numberOfLines={1}>
-              {menuUrl}
-            </Text>
+          {/* QR Code Section */}
+          <View style={styles.printQRSection}>
+            <View style={styles.qrCodeWrapper}>
+              <QRCode
+                value={menuUrl}
+                size={120}
+                color="#000"
+                backgroundColor="#fff"
+              />
+            </View>
+            <Text style={styles.printQRText}>Scan for Digital Menu</Text>
           </View>
-        </View>
 
+          {/* Menu Items */}
+          <View style={styles.printMenuItems}>
+            {loading ? (
+              <ActivityIndicator size="small" color="#FF6B6B" />
+            ) : dishes.length > 0 ? (
+              <>
+                {/* Group by category */}
+                {['Appetizer', 'Main Course', 'Dessert', 'Beverage', 'Other'].map((category) => {
+                  const categoryDishes = dishes.filter((d) => d.category === category);
+                  if (categoryDishes.length === 0) return null;
+                  
+                  return (
+                    <View key={category} style={styles.printCategory}>
+                      <Text style={styles.printCategoryTitle}>{category}</Text>
+                      <View style={styles.printCategoryDivider} />
+                      
+                      {categoryDishes.map((dish) => (
+                        <View key={dish.$id} style={styles.printDishItem}>
+                          <View style={styles.printDishInfo}>
+                            <Text style={styles.printDishName}>{dish.name}</Text>
+                            <Text style={styles.printDishDescription} numberOfLines={2}>
+                              {dish.description}
+                            </Text>
+                          </View>
+                          {dish.images && (
+                            <Image 
+                              source={{ uri: dish.images }} 
+                              style={styles.printDishImage}
+                              resizeMode="cover"
+                            />
+                          )}
+                          <Text style={styles.printDishPrice}>₹{dish.price}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  );
+                })}
+              </>
+            ) : (
+              <Text style={styles.printNoDishes}>No dishes added yet</Text>
+            )}
+          </View>
+
+          {/* Footer */}
+          <View style={styles.printFooter}>
+            <View style={styles.printDivider} />
+            <Text style={styles.printFooterText}>Thank you for visiting!</Text>
+            <Text style={styles.printUrlText}>{menuUrl}</Text>
+          </View>
+        </ViewShot>
+
+        {/* Action Buttons */}
         <View style={styles.actionsContainer}>
           <TouchableOpacity
-            style={styles.actionButton}
+            style={[styles.actionButton, styles.downloadButton]}
+            onPress={handleDownloadMenu}
+            disabled={generating}
+          >
+            {generating ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.actionButtonText}>💾 Download Menu</Text>
+            )}
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.actionButton, styles.shareButton]}
+            onPress={() => handleShareMenu()}
+            disabled={generating}
+          >
+            <Text style={styles.actionButtonText}>📤 Share Menu</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionButton, styles.copyButton]}
             onPress={handleCopyUrl}
           >
             <Text style={styles.actionButtonText}>📋 Copy URL</Text>
@@ -226,6 +382,137 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold'
+  },
+  downloadButton: {
+    backgroundColor: '#4CAF50'
+  },
+  shareButton: {
+    backgroundColor: '#2196F3'
+  },
+  copyButton: {
+    backgroundColor: '#FF9800'
+  },
+  // Print Menu Styles
+  menuPrintView: {
+    backgroundColor: '#FFFFFF',
+    padding: 30,
+    marginBottom: 20
+  },
+  printHeader: {
+    alignItems: 'center',
+    marginBottom: 25
+  },
+  printRestaurantName: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#2C3E50',
+    marginBottom: 8
+  },
+  printTagline: {
+    fontSize: 18,
+    color: '#7F8C8D',
+    fontStyle: 'italic'
+  },
+  printDivider: {
+    width: '100%',
+    height: 2,
+    backgroundColor: '#FF6B6B',
+    marginTop: 15
+  },
+  printQRSection: {
+    alignItems: 'center',
+    marginVertical: 25,
+    padding: 20,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 15
+  },
+  qrCodeWrapper: {
+    padding: 15,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3
+  },
+  printQRText: {
+    fontSize: 14,
+    color: '#2C3E50',
+    fontWeight: '600',
+    marginTop: 12
+  },
+  printMenuItems: {
+    marginTop: 20
+  },
+  printCategory: {
+    marginBottom: 30
+  },
+  printCategoryTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FF6B6B',
+    marginBottom: 10
+  },
+  printCategoryDivider: {
+    width: 60,
+    height: 3,
+    backgroundColor: '#FF6B6B',
+    marginBottom: 15
+  },
+  printDishItem: {
+    flexDirection: 'row',
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8E8E8',
+    alignItems: 'center'
+  },
+  printDishInfo: {
+    flex: 1,
+    marginRight: 10
+  },
+  printDishName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2C3E50',
+    marginBottom: 4
+  },
+  printDishDescription: {
+    fontSize: 14,
+    color: '#7F8C8D',
+    lineHeight: 20
+  },
+  printDishImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    marginRight: 10
+  },
+  printDishPrice: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FF6B6B',
+    minWidth: 80,
+    textAlign: 'right'
+  },
+  printNoDishes: {
+    fontSize: 16,
+    color: '#7F8C8D',
+    textAlign: 'center',
+    padding: 40
+  },
+  printFooter: {
+    alignItems: 'center',
+    marginTop: 30
+  },
+  printFooterText: {
+    fontSize: 16,
+    color: '#2C3E50',
+    marginVertical: 15
+  },
+  printUrlText: {
+    fontSize: 12,
+    color: '#7F8C8D'
   }
 });
 
