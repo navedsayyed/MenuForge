@@ -15,7 +15,6 @@ import {
 } from 'react-native';
 import authService from '../services/authService';
 import dishService from '../services/dishService';
-import { getImageUrl } from '../services/uploadService';
 import { Dish, User } from '../types';
 import { RootStackParamList } from '../types/navigation';
 

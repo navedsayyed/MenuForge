@@ -1,6 +1,6 @@
 // src/services/uploadService.ts
-import { APPWRITE_CONFIG, ID, storage, account } from '../config/appwrite';
 import * as FileSystem from 'expo-file-system/legacy';
+import { account, APPWRITE_CONFIG, ID, storage } from '../config/appwrite';
 
 // ============================================
 // Upload Service - Image Upload & Management
