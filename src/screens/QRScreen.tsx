@@ -1,6 +1,5 @@
 // src/screens/QRScreen.tsx
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
 import React, { useEffect, useRef, useState } from 'react';
 import {
