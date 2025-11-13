@@ -2,10 +2,12 @@
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    Animated,
+    Dimensions,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -17,6 +19,7 @@ import {
     View
 } from 'react-native';
 import { APPWRITE_CONFIG, databases } from '../config/appwrite';
+import { useTheme } from '../contexts/ThemeContext';
 import authService from '../services/authService';
 import { User } from '../types';
 import { MainTabParamList, RootStackParamList } from '../types/navigation';
@@ -40,9 +43,12 @@ interface RestaurantInfo {
 }
 
 const ProfileScreen: React.FC<Props> = ({ navigation }) => {
+  const { themeMode, setThemeMode, isDark, colors } = useTheme();
   const [userData, setUserData] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const slideAnim = useRef(new Animated.Value(Dimensions.get('window').width)).current;
   const [restaurantInfo, setRestaurantInfo] = useState<RestaurantInfo>({
     name: '',
     address: '',
@@ -55,6 +61,14 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
   useEffect(() => {
     loadUserData();
   }, []);
+
+  useEffect(() => {
+    Animated.timing(slideAnim, {
+      toValue: showSettings ? 0 : Dimensions.get('window').width,
+      duration: 300,
+      useNativeDriver: true
+    }).start();
+  }, [showSettings]);
 
   const loadUserData = async () => {
     try {
@@ -152,21 +166,25 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF6B6B" />
-        <Text style={styles.loadingText}>Loading profile...</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading profile...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#FF6B6B" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.primary} />
       
       <View style={styles.header}>
-        <View style={styles.backButton} />
         <Text style={styles.headerTitle}>Profile</Text>
-        <View style={styles.backButton} />
+        <TouchableOpacity 
+          style={styles.settingsButton} 
+          onPress={() => setShowSettings(!showSettings)}
+        >
+          <Text style={styles.settingsButtonText}>⚙️</Text>
+        </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView 
@@ -175,93 +193,95 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
       >
         <ScrollView contentContainerStyle={styles.content}>
           {/* User Info Section */}
-          <View style={styles.userSection}>
-            <View style={styles.avatarContainer}>
+          <View style={[styles.userSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.avatarContainer, { backgroundColor: colors.primary }]}>
               <Text style={styles.avatarText}>
                 {userData?.name?.charAt(0).toUpperCase() || '👤'}
               </Text>
             </View>
-            <Text style={styles.userName}>{userData?.name}</Text>
-            <Text style={styles.userEmail}>{userData?.email}</Text>
+            <Text style={[styles.userName, { color: colors.text }]}>{userData?.name}</Text>
+            <Text style={[styles.userEmail, { color: colors.textSecondary }]}>{userData?.email}</Text>
           </View>
 
+
+
           {/* Restaurant Information Form */}
-          <View style={styles.formSection}>
-            <Text style={styles.sectionTitle}>Restaurant Information</Text>
+          <View style={[styles.formSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>🏪 Restaurant Information</Text>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Restaurant Name *</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Restaurant Name *</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                 value={restaurantInfo.name}
                 onChangeText={(text) => setRestaurantInfo({...restaurantInfo, name: text})}
                 placeholder="Enter restaurant name"
-                placeholderTextColor="#95A5A6"
+                placeholderTextColor={colors.inactive}
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Address</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Address</Text>
               <TextInput
-                style={[styles.input, styles.textArea]}
+                style={[styles.input, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                 value={restaurantInfo.address}
                 onChangeText={(text) => setRestaurantInfo({...restaurantInfo, address: text})}
                 placeholder="Enter full address"
-                placeholderTextColor="#95A5A6"
+                placeholderTextColor={colors.inactive}
                 multiline
                 numberOfLines={3}
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Phone Number</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Phone Number</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                 value={restaurantInfo.phone}
                 onChangeText={(text) => setRestaurantInfo({...restaurantInfo, phone: text})}
                 placeholder="+91 XXXXX XXXXX"
-                placeholderTextColor="#95A5A6"
+                placeholderTextColor={colors.inactive}
                 keyboardType="phone-pad"
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Operating Hours</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Operating Hours</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                 value={restaurantInfo.timing}
                 onChangeText={(text) => setRestaurantInfo({...restaurantInfo, timing: text})}
                 placeholder="e.g., Mon-Sun: 10:00 AM - 10:00 PM"
-                placeholderTextColor="#95A5A6"
+                placeholderTextColor={colors.inactive}
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Location / Area</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Location / Area</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                 value={restaurantInfo.location}
                 onChangeText={(text) => setRestaurantInfo({...restaurantInfo, location: text})}
                 placeholder="e.g., MG Road, Bangalore"
-                placeholderTextColor="#95A5A6"
+                placeholderTextColor={colors.inactive}
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Description</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Description</Text>
               <TextInput
-                style={[styles.input, styles.textArea]}
+                style={[styles.input, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                 value={restaurantInfo.description}
                 onChangeText={(text) => setRestaurantInfo({...restaurantInfo, description: text})}
                 placeholder="Tell customers about your restaurant"
-                placeholderTextColor="#95A5A6"
+                placeholderTextColor={colors.inactive}
                 multiline
                 numberOfLines={4}
               />
             </View>
 
             <TouchableOpacity
-              style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+              style={[styles.saveButton, { backgroundColor: colors.primary }, saving && styles.saveButtonDisabled]}
               onPress={handleSave}
               disabled={saving}
             >
@@ -275,13 +295,94 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
 
           {/* Logout Button */}
           <TouchableOpacity
-            style={styles.logoutButton}
+            style={[styles.logoutButton, { backgroundColor: colors.card, borderColor: colors.error }]}
             onPress={handleLogout}
           >
-            <Text style={styles.logoutButtonText}>🚪 Logout</Text>
+            <Text style={[styles.logoutButtonText, { color: colors.error }]}>🚪 Logout</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Settings Drawer Overlay */}
+      {showSettings && (
+        <TouchableOpacity
+          style={styles.overlay}
+          activeOpacity={1}
+          onPress={() => setShowSettings(false)}
+        >
+          <View style={{ flex: 1 }} />
+        </TouchableOpacity>
+      )}
+
+      {/* Settings Drawer */}
+      <Animated.View
+        style={[
+          styles.drawer,
+          {
+            backgroundColor: colors.background,
+            transform: [{ translateX: slideAnim }]
+          }
+        ]}
+      >
+        <View style={[styles.drawerHeader, { backgroundColor: colors.primary, borderBottomColor: colors.border }]}>
+          <Text style={styles.drawerTitle}>⚙️ Settings</Text>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => setShowSettings(false)}
+          >
+            <Text style={styles.closeButtonText}>✕</Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={styles.drawerContent}>
+          <View style={styles.drawerSection}>
+            <Text style={[styles.drawerLabel, { color: colors.text }]}>Appearance</Text>
+            <View style={styles.themeOptions}>
+              <TouchableOpacity
+                style={[
+                  styles.themeOption,
+                  { backgroundColor: colors.surface, borderColor: colors.border },
+                  themeMode === 'light' && styles.themeOptionActive
+                ]}
+                onPress={() => setThemeMode('light')}
+              >
+                <Text style={styles.themeIcon}>☀️</Text>
+                <Text style={[styles.themeLabel, { color: colors.text }]}>Light</Text>
+                {themeMode === 'light' && <Text style={styles.checkmark}>✓</Text>}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.themeOption,
+                  { backgroundColor: colors.surface, borderColor: colors.border },
+                  themeMode === 'dark' && styles.themeOptionActive
+                ]}
+                onPress={() => setThemeMode('dark')}
+              >
+                <Text style={styles.themeIcon}>🌙</Text>
+                <Text style={[styles.themeLabel, { color: colors.text }]}>Dark</Text>
+                {themeMode === 'dark' && <Text style={styles.checkmark}>✓</Text>}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.themeOption,
+                  { backgroundColor: colors.surface, borderColor: colors.border },
+                  themeMode === 'system' && styles.themeOptionActive
+                ]}
+                onPress={() => setThemeMode('system')}
+              >
+                <Text style={styles.themeIcon}>📱</Text>
+                <Text style={[styles.themeLabel, { color: colors.text }]}>System</Text>
+                {themeMode === 'system' && <Text style={styles.checkmark}>✓</Text>}
+              </TouchableOpacity>
+            </View>
+            <Text style={[styles.themeHint, { color: colors.textSecondary }]}>
+              {themeMode === 'system' ? 'Following device theme' : `Using ${themeMode} theme`}
+            </Text>
+          </View>
+        </ScrollView>
+      </Animated.View>
     </View>
   );
 };
@@ -310,7 +411,7 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 40,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -324,6 +425,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center'
   },
+  settingsButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  settingsButtonText: {
+    fontSize: 24,
+    color: '#FFFFFF'
+  },
   backButtonText: {
     fontSize: 28,
     color: '#FFFFFF',
@@ -332,7 +443,8 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#FFFFFF'
+    color: '#FFFFFF',
+    flex: 1
   },
   content: {
     padding: 20,
@@ -373,6 +485,17 @@ const styles = StyleSheet.create({
   userEmail: {
     fontSize: 14,
     color: '#7F8C8D'
+  },
+  settingsSection: {
+    backgroundColor: '#FFFFFF',
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3
   },
   formSection: {
     backgroundColor: '#FFFFFF',
@@ -445,6 +568,104 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#E74C3C'
+  },
+  themeOptions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8
+  },
+  themeOption: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    alignItems: 'center',
+    position: 'relative'
+  },
+  themeOptionActive: {
+    borderColor: '#FF6B6B',
+    backgroundColor: 'rgba(255, 107, 107, 0.1)'
+  },
+  themeIcon: {
+    fontSize: 28,
+    marginBottom: 8
+  },
+  themeLabel: {
+    fontSize: 14,
+    fontWeight: '600'
+  },
+  checkmark: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    fontSize: 16,
+    color: '#FF6B6B',
+    fontWeight: 'bold'
+  },
+  themeHint: {
+    fontSize: 12,
+    marginTop: 8,
+    fontStyle: 'italic'
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 999
+  },
+  drawer: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: '80%',
+    maxWidth: 320,
+    shadowColor: '#000',
+    shadowOffset: { width: -2, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 10,
+    zIndex: 1000
+  },
+  drawerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    paddingTop: 40,
+    borderBottomWidth: 1
+  },
+  drawerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF'
+  },
+  closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  closeButtonText: {
+    fontSize: 20,
+    color: '#FFFFFF',
+    fontWeight: 'bold'
+  },
+  drawerContent: {
+    flex: 1
+  },
+  drawerSection: {
+    padding: 20
+  },
+  drawerLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12
   }
 });
 

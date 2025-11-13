@@ -2,6 +2,7 @@
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { LogBox } from 'react-native';
+import { ThemeProvider } from './src/contexts/ThemeContext';
 import AppNavigator from './src/navigation/AppNavigator';
 
 // Ignore specific warnings (optional)
@@ -15,9 +16,9 @@ LogBox.ignoreLogs([
 
 export default function App() {
   return (
-    <>
+    <ThemeProvider>
       <StatusBar style="auto" />
       <AppNavigator />
-    </>
+    </ThemeProvider>
   );
 }

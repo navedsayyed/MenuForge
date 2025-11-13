@@ -147,14 +147,7 @@ const QRScreen: React.FC<Props> = ({ navigation }) => {
       <StatusBar barStyle="light-content" backgroundColor="#FF6B6B" />
       
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.backButtonText}>←</Text>
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>Menu & QR Code</Text>
-        <View style={styles.backButton} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -284,7 +277,7 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 40,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     alignItems: 'center'
   },
   backButton: {
@@ -301,7 +294,8 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF'
+    color: '#FFFFFF',
+    flex: 1
   },
   content: {
     padding: 20
