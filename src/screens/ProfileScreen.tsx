@@ -336,50 +336,7 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
 
         <ScrollView style={styles.drawerContent}>
           <View style={styles.drawerSection}>
-            <Text style={[styles.drawerLabel, { color: colors.text }]}>Appearance</Text>
-            <View style={styles.themeOptions}>
-              <TouchableOpacity
-                style={[
-                  styles.themeOption,
-                  { backgroundColor: colors.surface, borderColor: colors.border },
-                  themeMode === 'light' && styles.themeOptionActive
-                ]}
-                onPress={() => setThemeMode('light')}
-              >
-                <Text style={styles.themeIcon}>☀️</Text>
-                <Text style={[styles.themeLabel, { color: colors.text }]}>Light</Text>
-                {themeMode === 'light' && <Text style={styles.checkmark}>✓</Text>}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.themeOption,
-                  { backgroundColor: colors.surface, borderColor: colors.border },
-                  themeMode === 'dark' && styles.themeOptionActive
-                ]}
-                onPress={() => setThemeMode('dark')}
-              >
-                <Text style={styles.themeIcon}>🌙</Text>
-                <Text style={[styles.themeLabel, { color: colors.text }]}>Dark</Text>
-                {themeMode === 'dark' && <Text style={styles.checkmark}>✓</Text>}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.themeOption,
-                  { backgroundColor: colors.surface, borderColor: colors.border },
-                  themeMode === 'system' && styles.themeOptionActive
-                ]}
-                onPress={() => setThemeMode('system')}
-              >
-                <Text style={styles.themeIcon}>📱</Text>
-                <Text style={[styles.themeLabel, { color: colors.text }]}>System</Text>
-                {themeMode === 'system' && <Text style={styles.checkmark}>✓</Text>}
-              </TouchableOpacity>
-            </View>
-            <Text style={[styles.themeHint, { color: colors.textSecondary }]}>
-              {themeMode === 'system' ? 'Following device theme' : `Using ${themeMode} theme`}
-            </Text>
+            <Text style={[styles.comingSoonText, { color: colors.textSecondary }]}>Coming Soon...</Text>
           </View>
         </ScrollView>
       </Animated.View>
@@ -666,6 +623,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 12
+  },
+  comingSoonText: {
+    fontSize: 18,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 40
   }
 });
 
