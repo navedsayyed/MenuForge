@@ -64,7 +64,7 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
         [
           {
             text: 'OK',
-            onPress: () => navigation.replace('Dashboard')
+            onPress: () => navigation.replace('Main', { screen: 'DashboardTab' })
           }
         ]
       );

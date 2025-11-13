@@ -28,7 +28,7 @@ const SplashScreen: React.FC<Props> = ({ navigation }) => {
       const user = await authService.getCurrentUser();
 
       if (user) {
-        navigation.replace('Dashboard');
+        navigation.replace('Main', { screen: 'DashboardTab' });
       } else {
         navigation.replace('Login');
       }

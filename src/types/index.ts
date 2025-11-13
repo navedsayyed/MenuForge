@@ -33,6 +33,11 @@ export interface Restaurant {
   name: string;
   email: string;
   userId: string;
+  address?: string;
+  phone?: string;
+  timing?: string;
+  location?: string;
+  description?: string;
   createdAt: string;
 }
 

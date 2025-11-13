@@ -45,7 +45,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
     try {
       const user = await authService.login(email.trim(), password);
       console.log('Login successful:', user);
-      navigation.replace('Dashboard');
+      navigation.replace('Main', { screen: 'DashboardTab' });
     } catch (error: any) {
       console.error('Login error:', error);
       Alert.alert('Login Failed', error.message || 'Invalid email or password');

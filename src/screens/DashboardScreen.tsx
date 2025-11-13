@@ -1,24 +1,29 @@
 // src/screens/DashboardScreen.tsx
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { CompositeNavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Image,
-    RefreshControl,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  RefreshControl,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import authService from '../services/authService';
 import dishService from '../services/dishService';
 import { Dish, User } from '../types';
-import { RootStackParamList } from '../types/navigation';
+import { MainTabParamList, RootStackParamList } from '../types/navigation';
 
-type DashboardScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Dashboard'>;
+type DashboardScreenNavigationProp = CompositeNavigationProp<
+  BottomTabNavigationProp<MainTabParamList, 'DashboardTab'>,
+  NativeStackNavigationProp<RootStackParamList>
+>;
 
 interface Props {
   navigation: DashboardScreenNavigationProp;
@@ -229,20 +234,14 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
             {userData?.restaurantName || 'Restaurant'}
           </Text>
         </View>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={() => navigation.navigate('QR')}
-          >
-            <Text style={styles.headerButtonText}>📱</Text>
-          </TouchableOpacity>
+        {/* <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.headerButton}
             onPress={handleLogout}
           >
             <Text style={styles.headerButtonText}>🚪</Text>
           </TouchableOpacity>
-        </View>
+        </View> */}
       </View>
 
       <FlatList
@@ -266,33 +265,6 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
-
-      {/* Bottom Navigation Bar */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity
-          style={[styles.navButton, styles.navButtonActive]}
-          onPress={() => {}}
-        >
-          <Text style={styles.navIconActive}>🏠</Text>
-          <Text style={styles.navLabelActive}>Dashboard</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navButton}
-          onPress={() => navigation.navigate('QR')}
-        >
-          <Text style={styles.navIcon}>📱</Text>
-          <Text style={styles.navLabel}>Generate QR</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navButton}
-          onPress={() => Alert.alert('Profile', 'Profile screen coming soon!')}
-        >
-          <Text style={styles.navIcon}>👤</Text>
-          <Text style={styles.navLabel}>Profile</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 };
@@ -493,50 +465,6 @@ const styles = StyleSheet.create({
     fontSize: 28,
     color: '#FFFFFF',
     fontWeight: 'bold'
-  },
-  // Bottom Navigation Styles
-  bottomNav: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-    paddingVertical: 8,
-    paddingBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 4
-  },
-  navButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 6
-  },
-  navButtonActive: {
-    borderTopWidth: 2,
-    borderTopColor: '#FF6B6B'
-  },
-  navIcon: {
-    fontSize: 22,
-    marginBottom: 2,
-    opacity: 0.5
-  },
-  navIconActive: {
-    fontSize: 22,
-    marginBottom: 2,
-    opacity: 1
-  },
-  navLabel: {
-    fontSize: 11,
-    color: '#95A5A6',
-    fontWeight: '500'
-  },
-  navLabelActive: {
-    fontSize: 11,
-    color: '#FF6B6B',
-    fontWeight: '600'
   }
 });
 
