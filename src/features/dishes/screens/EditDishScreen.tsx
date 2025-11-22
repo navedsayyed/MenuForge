@@ -15,6 +15,7 @@ import {
   View
 } from 'react-native';
 import { Asset, launchCamera, launchImageLibrary } from 'react-native-image-picker';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Category } from '../../../types';
 import { RootStackParamList } from '../../../types/navigation';
 import authService from '../../auth/services/authService';
@@ -232,7 +233,7 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="light-content" backgroundColor="#FF6B6B" />
 
       <View style={styles.header}>
@@ -326,7 +327,7 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
                 {existingImages.map((imagePath, index) => (
                   <View key={`existing-${index}`} style={styles.imageItem}>
                     <Image
-                      source={getImageUrl(imagePath) ? { uri: getImageUrl(imagePath)! } : require('../assets/placeholder.png')}
+                      source={getImageUrl(imagePath) ? { uri: getImageUrl(imagePath)! } : require('../../../assets/placeholder.png')}
                       style={styles.imagePreview}
                     />
                     <TouchableOpacity
@@ -399,7 +400,7 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
 
         <View style={styles.bottomPadding} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 

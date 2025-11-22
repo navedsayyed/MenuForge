@@ -1,4 +1,3 @@
-// src/screens/SplashScreen.tsx
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useEffect } from 'react';
 import {
@@ -8,6 +7,7 @@ import {
   Text,
   View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import authService from '../features/auth/services/authService';
 import { RootStackParamList } from '../types/navigation';
 
@@ -39,26 +39,28 @@ const SplashScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="light-content" backgroundColor="#FF6B6B" />
 
-      <View style={styles.logoContainer}>
-        <View style={styles.iconCircle}>
-          <Text style={styles.iconText}>🍽️</Text>
+      <View style={styles.contentContainer}>
+        <View style={styles.logoContainer}>
+          <View style={styles.iconCircle}>
+            <Text style={styles.iconText}>🍽️</Text>
+          </View>
+          <Text style={styles.appName}>Restaurant Admin</Text>
+          <Text style={styles.tagline}>Manage your dishes with ease</Text>
         </View>
-        <Text style={styles.appName}>Restaurant Admin</Text>
-        <Text style={styles.tagline}>Manage your dishes with ease</Text>
-      </View>
 
-      <View style={styles.loaderContainer}>
-        <ActivityIndicator size="large" color="#FFFFFF" />
-        <Text style={styles.loadingText}>Loading...</Text>
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color="#FFFFFF" />
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
       </View>
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>Powered by Appwrite</Text>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -66,6 +68,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FF6B6B',
+  },
+  contentContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20
@@ -111,9 +116,8 @@ const styles = StyleSheet.create({
     fontWeight: '500'
   },
   footer: {
-    position: 'absolute',
-    bottom: 30,
-    alignItems: 'center'
+    alignItems: 'center',
+    paddingBottom: 10
   },
   footerText: {
     color: 'rgba(255, 255, 255, 0.7)',

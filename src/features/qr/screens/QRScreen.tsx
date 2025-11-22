@@ -14,12 +14,13 @@ import {
   View
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Share from 'react-native-share';
 import ViewShot from 'react-native-view-shot';
-import authService from '../../auth/services/authService';
-import dishService from '../services/dishService';
 import { Dish, User } from '../../../types';
 import { MainTabParamList, RootStackParamList } from '../../../types/navigation';
+import authService from '../../auth/services/authService';
+import dishService from '../../dishes/services/dishService';
 
 type QRScreenNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList, 'QRTab'>,
@@ -144,129 +145,135 @@ const QRScreen: React.FC<Props> = ({ navigation }) => {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="light-content" backgroundColor="#FF6B6B" />
 
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Menu & QR Code</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        {/* Printable Menu View */}
-        <ViewShot
-          ref={viewShotRef}
-          options={{ format: 'jpg', quality: 1.0 }}
-          style={styles.menuPrintView}
-        >
-          {/* Restaurant Header */}
-          <View style={styles.printHeader}>
-            <Text style={styles.printRestaurantName}>{userData.restaurantName}</Text>
-            <Text style={styles.printTagline}>Our Menu</Text>
-            <View style={styles.printDivider} />
-          </View>
-
-          {/* QR Code Section */}
-          <View style={styles.printQRSection}>
-            <View style={styles.qrCodeWrapper}>
-              <QRCode
-                value={menuUrl}
-                size={120}
-                color="#000"
-                backgroundColor="#fff"
-              />
+      <View style={styles.contentContainer}>
+        <ScrollView contentContainerStyle={styles.content}>
+          {/* Printable Menu View */}
+          <ViewShot
+            ref={viewShotRef}
+            options={{ format: 'jpg', quality: 1.0 }}
+            style={styles.menuPrintView}
+          >
+            {/* Restaurant Header */}
+            <View style={styles.printHeader}>
+              <Text style={styles.printRestaurantName}>{userData.restaurantName}</Text>
+              <Text style={styles.printTagline}>Our Menu</Text>
+              <View style={styles.printDivider} />
             </View>
-            <Text style={styles.printQRText}>Scan for Digital Menu</Text>
-          </View>
 
-          {/* Menu Items */}
-          <View style={styles.printMenuItems}>
-            {loading ? (
-              <ActivityIndicator size="small" color="#FF6B6B" />
-            ) : dishes.length > 0 ? (
-              <>
-                {/* Group by category */}
-                {['Appetizer', 'Main Course', 'Dessert', 'Beverage', 'Other'].map((category) => {
-                  const categoryDishes = dishes.filter((d) => d.category === category);
-                  if (categoryDishes.length === 0) return null;
+            {/* QR Code Section */}
+            <View style={styles.printQRSection}>
+              <View style={styles.qrCodeWrapper}>
+                <QRCode
+                  value={menuUrl}
+                  size={120}
+                  color="#000"
+                  backgroundColor="#fff"
+                />
+              </View>
+              <Text style={styles.printQRText}>Scan for Digital Menu</Text>
+            </View>
 
-                  return (
-                    <View key={category} style={styles.printCategory}>
-                      <Text style={styles.printCategoryTitle}>{category}</Text>
-                      <View style={styles.printCategoryDivider} />
+            {/* Menu Items */}
+            <View style={styles.printMenuItems}>
+              {loading ? (
+                <ActivityIndicator size="small" color="#FF6B6B" />
+              ) : dishes.length > 0 ? (
+                <>
+                  {/* Group by category */}
+                  {['Appetizer', 'Main Course', 'Dessert', 'Beverage', 'Other'].map((category) => {
+                    const categoryDishes = dishes.filter((d) => d.category === category);
+                    if (categoryDishes.length === 0) return null;
 
-                      {categoryDishes.map((dish) => (
-                        <View key={dish.$id} style={styles.printDishItem}>
-                          <View style={styles.printDishInfo}>
-                            <Text style={styles.printDishName}>{dish.name}</Text>
-                            <Text style={styles.printDishDescription} numberOfLines={2}>
-                              {dish.description}
-                            </Text>
+                    return (
+                      <View key={category} style={styles.printCategory}>
+                        <Text style={styles.printCategoryTitle}>{category}</Text>
+                        <View style={styles.printCategoryDivider} />
+
+                        {categoryDishes.map((dish) => (
+                          <View key={dish.$id} style={styles.printDishItem}>
+                            <View style={styles.printDishInfo}>
+                              <Text style={styles.printDishName}>{dish.name}</Text>
+                              <Text style={styles.printDishDescription} numberOfLines={2}>
+                                {dish.description}
+                              </Text>
+                            </View>
+                            {dish.images && (
+                              <Image
+                                source={{ uri: dish.images }}
+                                style={styles.printDishImage}
+                                resizeMode="cover"
+                              />
+                            )}
+                            <Text style={styles.printDishPrice}>₹{dish.price}</Text>
                           </View>
-                          {dish.images && (
-                            <Image
-                              source={{ uri: dish.images }}
-                              style={styles.printDishImage}
-                              resizeMode="cover"
-                            />
-                          )}
-                          <Text style={styles.printDishPrice}>₹{dish.price}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  );
-                })}
-              </>
-            ) : (
-              <Text style={styles.printNoDishes}>No dishes added yet</Text>
-            )}
+                        ))}
+                      </View>
+                    );
+                  })}
+                </>
+              ) : (
+                <Text style={styles.printNoDishes}>No dishes added yet</Text>
+              )}
+            </View>
+
+            {/* Footer */}
+            <View style={styles.printFooter}>
+              <View style={styles.printDivider} />
+              <Text style={styles.printFooterText}>Thank you for visiting!</Text>
+              <Text style={styles.printUrlText}>{menuUrl}</Text>
+            </View>
+          </ViewShot>
+
+          {/* Action Buttons */}
+          <View style={styles.actionsContainer}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.downloadButton]}
+              onPress={handleDownloadMenu}
+              disabled={generating}
+            >
+              {generating ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.actionButtonText}>💾 Download Menu</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionButton, styles.shareButton]}
+              onPress={() => handleShareMenu()}
+              disabled={generating}
+            >
+              <Text style={styles.actionButtonText}>📤 Share Menu</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionButton, styles.copyButton]}
+              onPress={handleCopyUrl}
+            >
+              <Text style={styles.actionButtonText}>📋 Copy URL</Text>
+            </TouchableOpacity>
           </View>
-
-          {/* Footer */}
-          <View style={styles.printFooter}>
-            <View style={styles.printDivider} />
-            <Text style={styles.printFooterText}>Thank you for visiting!</Text>
-            <Text style={styles.printUrlText}>{menuUrl}</Text>
-          </View>
-        </ViewShot>
-
-        {/* Action Buttons */}
-        <View style={styles.actionsContainer}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.downloadButton]}
-            onPress={handleDownloadMenu}
-            disabled={generating}
-          >
-            {generating ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.actionButtonText}>💾 Download Menu</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionButton, styles.shareButton]}
-            onPress={() => handleShareMenu()}
-            disabled={generating}
-          >
-            <Text style={styles.actionButtonText}>📤 Share Menu</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionButton, styles.copyButton]}
-            onPress={handleCopyUrl}
-          >
-            <Text style={styles.actionButtonText}>📋 Copy URL</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </View>
+        </ScrollView>
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA'
+    backgroundColor: '#FF6B6B' // Set to primary color for status bar area
+  },
+  contentContainer: {
+    flex: 1,
+    backgroundColor: '#F8F9FA' // Restore light background for content
   },
   loadingContainer: {
     flex: 1,

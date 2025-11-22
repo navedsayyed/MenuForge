@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Dish, User } from '../../../types';
 import { MainTabParamList, RootStackParamList } from '../../../types/navigation';
 import authService from '../../auth/services/authService';
@@ -228,7 +229,7 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="light-content" backgroundColor="#FF6B6B" />
 
       <View style={styles.header}>
@@ -248,20 +249,22 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
         </View> */}
       </View>
 
-      <FlatList
-        data={dishes}
-        renderItem={renderDishCard}
-        keyExtractor={(item) => item.$id}
-        contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={['#FF6B6B']}
-          />
-        }
-        ListEmptyComponent={renderEmptyList}
-      />
+      <View style={styles.contentContainer}>
+        <FlatList
+          data={dishes}
+          renderItem={renderDishCard}
+          keyExtractor={(item) => item.$id}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={['#FF6B6B']}
+            />
+          }
+          ListEmptyComponent={renderEmptyList}
+        />
+      </View>
 
       <TouchableOpacity
         style={styles.fab}
@@ -269,14 +272,18 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA'
+    backgroundColor: '#FF6B6B' // Set to primary color for status bar area
+  },
+  contentContainer: {
+    flex: 1,
+    backgroundColor: '#F8F9FA' // Restore light background for content
   },
   loadingContainer: {
     flex: 1,

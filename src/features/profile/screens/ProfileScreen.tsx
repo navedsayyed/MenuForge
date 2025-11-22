@@ -4,25 +4,26 @@ import { CompositeNavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Animated,
-    Dimensions,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { APPWRITE_CONFIG, databases } from '../../../api/client/appwrite';
-import { useTheme } from '../contexts/ThemeContext';
-import authService from '../../auth/services/authService';
+import { useTheme } from '../../../providers/AuthProvider';
 import { User } from '../../../types';
 import { MainTabParamList, RootStackParamList } from '../../../types/navigation';
+import authService from '../../auth/services/authService';
 
 type ProfileScreenNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList, 'ProfileTab'>,
@@ -95,7 +96,7 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
         APPWRITE_CONFIG.restaurantsCollectionId,
         restaurantId
       );
-      
+
       setRestaurantInfo({
         name: response.name || '',
         address: response.address || '',
@@ -174,134 +175,136 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.primary }]} edges={['top']}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.primary} />
-      
+
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Profile</Text>
-        <TouchableOpacity 
-          style={styles.settingsButton} 
+        <TouchableOpacity
+          style={styles.settingsButton}
           onPress={() => setShowSettings(!showSettings)}
         >
           <Text style={styles.settingsButtonText}>⚙️</Text>
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.flex}
-      >
-        <ScrollView contentContainerStyle={styles.content}>
-          {/* User Info Section */}
-          <View style={[styles.userSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={[styles.avatarContainer, { backgroundColor: colors.primary }]}>
-              <Text style={styles.avatarText}>
-                {userData?.name?.charAt(0).toUpperCase() || '👤'}
-              </Text>
-            </View>
-            <Text style={[styles.userName, { color: colors.text }]}>{userData?.name}</Text>
-            <Text style={[styles.userEmail, { color: colors.textSecondary }]}>{userData?.email}</Text>
-          </View>
-
-
-
-          {/* Restaurant Information Form */}
-          <View style={[styles.formSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>🏪 Restaurant Information</Text>
-
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Restaurant Name *</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                value={restaurantInfo.name}
-                onChangeText={(text) => setRestaurantInfo({...restaurantInfo, name: text})}
-                placeholder="Enter restaurant name"
-                placeholderTextColor={colors.inactive}
-              />
+      <View style={[styles.flex, { backgroundColor: colors.background }]}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.flex}
+        >
+          <ScrollView contentContainerStyle={styles.content}>
+            {/* User Info Section */}
+            <View style={[styles.userSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={[styles.avatarContainer, { backgroundColor: colors.primary }]}>
+                <Text style={styles.avatarText}>
+                  {userData?.name?.charAt(0).toUpperCase() || '👤'}
+                </Text>
+              </View>
+              <Text style={[styles.userName, { color: colors.text }]}>{userData?.name}</Text>
+              <Text style={[styles.userEmail, { color: colors.textSecondary }]}>{userData?.email}</Text>
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Address</Text>
-              <TextInput
-                style={[styles.input, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                value={restaurantInfo.address}
-                onChangeText={(text) => setRestaurantInfo({...restaurantInfo, address: text})}
-                placeholder="Enter full address"
-                placeholderTextColor={colors.inactive}
-                multiline
-                numberOfLines={3}
-              />
+
+
+            {/* Restaurant Information Form */}
+            <View style={[styles.formSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>🏪 Restaurant Information</Text>
+
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: colors.text }]}>Restaurant Name *</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  value={restaurantInfo.name}
+                  onChangeText={(text) => setRestaurantInfo({ ...restaurantInfo, name: text })}
+                  placeholder="Enter restaurant name"
+                  placeholderTextColor={colors.inactive}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: colors.text }]}>Address</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  value={restaurantInfo.address}
+                  onChangeText={(text) => setRestaurantInfo({ ...restaurantInfo, address: text })}
+                  placeholder="Enter full address"
+                  placeholderTextColor={colors.inactive}
+                  multiline
+                  numberOfLines={3}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: colors.text }]}>Phone Number</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  value={restaurantInfo.phone}
+                  onChangeText={(text) => setRestaurantInfo({ ...restaurantInfo, phone: text })}
+                  placeholder="+91 XXXXX XXXXX"
+                  placeholderTextColor={colors.inactive}
+                  keyboardType="phone-pad"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: colors.text }]}>Operating Hours</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  value={restaurantInfo.timing}
+                  onChangeText={(text) => setRestaurantInfo({ ...restaurantInfo, timing: text })}
+                  placeholder="e.g., Mon-Sun: 10:00 AM - 10:00 PM"
+                  placeholderTextColor={colors.inactive}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: colors.text }]}>Location / Area</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  value={restaurantInfo.location}
+                  onChangeText={(text) => setRestaurantInfo({ ...restaurantInfo, location: text })}
+                  placeholder="e.g., MG Road, Bangalore"
+                  placeholderTextColor={colors.inactive}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: colors.text }]}>Description</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  value={restaurantInfo.description}
+                  onChangeText={(text) => setRestaurantInfo({ ...restaurantInfo, description: text })}
+                  placeholder="Tell customers about your restaurant"
+                  placeholderTextColor={colors.inactive}
+                  multiline
+                  numberOfLines={4}
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[styles.saveButton, { backgroundColor: colors.primary }, saving && styles.saveButtonDisabled]}
+                onPress={handleSave}
+                disabled={saving}
+              >
+                {saving ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.saveButtonText}>💾 Save Changes</Text>
+                )}
+              </TouchableOpacity>
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Phone Number</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                value={restaurantInfo.phone}
-                onChangeText={(text) => setRestaurantInfo({...restaurantInfo, phone: text})}
-                placeholder="+91 XXXXX XXXXX"
-                placeholderTextColor={colors.inactive}
-                keyboardType="phone-pad"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Operating Hours</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                value={restaurantInfo.timing}
-                onChangeText={(text) => setRestaurantInfo({...restaurantInfo, timing: text})}
-                placeholder="e.g., Mon-Sun: 10:00 AM - 10:00 PM"
-                placeholderTextColor={colors.inactive}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Location / Area</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                value={restaurantInfo.location}
-                onChangeText={(text) => setRestaurantInfo({...restaurantInfo, location: text})}
-                placeholder="e.g., MG Road, Bangalore"
-                placeholderTextColor={colors.inactive}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Description</Text>
-              <TextInput
-                style={[styles.input, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                value={restaurantInfo.description}
-                onChangeText={(text) => setRestaurantInfo({...restaurantInfo, description: text})}
-                placeholder="Tell customers about your restaurant"
-                placeholderTextColor={colors.inactive}
-                multiline
-                numberOfLines={4}
-              />
-            </View>
-
+            {/* Logout Button */}
             <TouchableOpacity
-              style={[styles.saveButton, { backgroundColor: colors.primary }, saving && styles.saveButtonDisabled]}
-              onPress={handleSave}
-              disabled={saving}
+              style={[styles.logoutButton, { backgroundColor: colors.card, borderColor: colors.error }]}
+              onPress={handleLogout}
             >
-              {saving ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.saveButtonText}>💾 Save Changes</Text>
-              )}
+              <Text style={[styles.logoutButtonText, { color: colors.error }]}>🚪 Logout</Text>
             </TouchableOpacity>
-          </View>
-
-          {/* Logout Button */}
-          <TouchableOpacity
-            style={[styles.logoutButton, { backgroundColor: colors.card, borderColor: colors.error }]}
-            onPress={handleLogout}
-          >
-            <Text style={[styles.logoutButtonText, { color: colors.error }]}>🚪 Logout</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
 
       {/* Settings Drawer Overlay */}
       {showSettings && (
@@ -340,7 +343,7 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </ScrollView>
       </Animated.View>
-    </View>
+    </SafeAreaView>
   );
 };
 

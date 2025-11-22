@@ -9,7 +9,7 @@ import { User } from '../../../types';
 
 // DEVELOPMENT MODE: Set to true to always show login screen on app reload
 // Set to false for production (sessions will persist)
-const DEV_MODE = true; // Change to false for production
+const DEV_MODE = false; // Change to false for production
 
 const authService = {
   /**
@@ -188,6 +188,20 @@ const authService = {
       return true;
     } catch (error) {
       return false;
+    }
+  },
+
+  /**
+   * Send password reset email
+   */
+  async sendPasswordResetEmail(email: string): Promise<void> {
+    try {
+      // Using google.com as redirect URL since we don't have deep linking set up yet
+      // The user will receive an email with a link to reset their password
+      await account.createRecovery(email, 'https://google.com');
+    } catch (error: any) {
+      console.error('Send password reset email error:', error);
+      throw new Error(error.message || 'Failed to send password reset email');
     }
   },
 

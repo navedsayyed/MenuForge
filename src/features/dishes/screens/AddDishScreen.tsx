@@ -14,6 +14,7 @@ import {
   View
 } from 'react-native';
 import { Asset, launchCamera, launchImageLibrary } from 'react-native-image-picker';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Category } from '../../../types';
 import { RootStackParamList } from '../../../types/navigation';
 import authService from '../../auth/services/authService';
@@ -163,7 +164,7 @@ const AddDishScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="light-content" backgroundColor="#FF6B6B" />
 
       <View style={styles.header}>
@@ -297,7 +298,7 @@ const AddDishScreen: React.FC<Props> = ({ navigation }) => {
 
         <View style={styles.bottomPadding} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 

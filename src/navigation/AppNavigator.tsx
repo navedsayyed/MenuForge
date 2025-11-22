@@ -7,13 +7,14 @@ import { StyleSheet, Text } from 'react-native';
 import { MainTabParamList, RootStackParamList } from '../types/navigation';
 
 // Screens
-import AddDishScreen from '../screens/AddDishScreen';
-import DashboardScreen from '../screens/DashboardScreen';
-import EditDishScreen from '../screens/EditDishScreen';
-import LoginScreen from '../screens/LoginScreen';
-import ProfileScreen from '../screens/ProfileScreen';
-import QRScreen from '../screens/QRScreen';
-import SignupScreen from '../screens/SignupScreen';
+// Screens
+import LoginScreen from '../features/auth/screens/LoginScreen';
+import SignupScreen from '../features/auth/screens/SignupScreen';
+import AddDishScreen from '../features/dishes/screens/AddDishScreen';
+import DashboardScreen from '../features/dishes/screens/DashboardScreen';
+import EditDishScreen from '../features/dishes/screens/EditDishScreen';
+import ProfileScreen from '../features/profile/screens/ProfileScreen';
+import QRScreen from '../features/qr/screens/QRScreen';
 import SplashScreen from '../screens/SplashScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -32,8 +33,8 @@ const MainTabs: React.FC = () => {
         tabBarIconStyle: styles.tabIcon
       }}
     >
-      <Tab.Screen 
-        name="DashboardTab" 
+      <Tab.Screen
+        name="DashboardTab"
         component={DashboardScreen}
         options={{
           tabBarLabel: 'Dashboard',
@@ -42,8 +43,8 @@ const MainTabs: React.FC = () => {
           )
         }}
       />
-      <Tab.Screen 
-        name="QRTab" 
+      <Tab.Screen
+        name="QRTab"
         component={QRScreen}
         options={{
           tabBarLabel: 'Generate QR',
@@ -52,8 +53,8 @@ const MainTabs: React.FC = () => {
           )
         }}
       />
-      <Tab.Screen 
-        name="ProfileTab" 
+      <Tab.Screen
+        name="ProfileTab"
         component={ProfileScreen}
         options={{
           tabBarLabel: 'Profile',

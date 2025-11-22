@@ -1,5 +1,6 @@
 import React from 'react';
 import { LogBox, StatusBar } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-url-polyfill/auto';
 import AppNavigator from './src/navigation/AppNavigator';
 import { ThemeProvider } from './src/providers/AuthProvider';
@@ -15,9 +16,11 @@ LogBox.ignoreLogs([
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      <AppNavigator />
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <AppNavigator />
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
