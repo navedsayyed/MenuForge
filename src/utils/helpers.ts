@@ -31,10 +31,10 @@ export const validatePassword = (password: string): PasswordValidation => {
   const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
 
   const isValid = password.length >= minLength;
-  
+
   let strength: 'Weak' | 'Medium' | 'Strong' = 'Weak';
   let score = 0;
-  
+
   if (password.length >= minLength) score++;
   if (hasUpperCase) score++;
   if (hasLowerCase) score++;
@@ -72,16 +72,16 @@ export const truncateText = (text: string, maxLength: number = 50): string => {
  */
 export const formatDate = (date: string | Date): string => {
   if (!date) return '';
-  
+
   const dateObj = new Date(date);
-  const options: Intl.DateTimeFormatOptions = { 
-    year: 'numeric', 
-    month: 'short', 
+  const options: Intl.DateTimeFormatOptions = {
+    year: 'numeric',
+    month: 'short',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
   };
-  
+
   return dateObj.toLocaleDateString('en-US', options);
 };
 
@@ -90,7 +90,7 @@ export const formatDate = (date: string | Date): string => {
  */
 export const getTimeAgo = (date: string | Date): string => {
   if (!date) return '';
-  
+
   const now = new Date();
   const dateObj = new Date(date);
   const seconds = Math.floor((now.getTime() - dateObj.getTime()) / 1000);
@@ -134,11 +134,11 @@ export const capitalizeFirst = (str: string): string => {
  */
 export const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 Bytes';
-  
+
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
+
   return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 };
 
@@ -146,17 +146,17 @@ export const formatFileSize = (bytes: number): string => {
  * Debounce function
  */
 export const debounce = <T extends (...args: any[]) => void>(
-  func: T, 
+  func: T,
   wait: number = 300
 ): ((...args: Parameters<T>) => void) => {
-  let timeout: NodeJS.Timeout;
+  let timeout: number | null = null;
   return function executedFunction(...args: Parameters<T>) {
     const later = () => {
-      clearTimeout(timeout);
+      if (timeout) clearTimeout(timeout);
       func(...args);
     };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(later, wait) as unknown as number;
   };
 };
 
@@ -178,8 +178,8 @@ export const deepClone = <T>(obj: T): T => {
  * Sort array by key
  */
 export const sortByKey = <T extends Record<string, any>>(
-  array: T[], 
-  key: keyof T, 
+  array: T[],
+  key: keyof T,
   order: 'asc' | 'desc' = 'asc'
 ): T[] => {
   return array.sort((a, b) => {
@@ -195,14 +195,14 @@ export const sortByKey = <T extends Record<string, any>>(
  * Filter array by search term
  */
 export const filterBySearch = <T extends Record<string, any>>(
-  array: T[], 
-  searchTerm: string, 
+  array: T[],
+  searchTerm: string,
   keys: (keyof T)[]
 ): T[] => {
   if (!searchTerm) return array;
-  
+
   const lowerSearch = searchTerm.toLowerCase();
-  
+
   return array.filter(item => {
     return keys.some(key => {
       const value = item[key];

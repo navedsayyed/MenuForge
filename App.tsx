@@ -1,7 +1,6 @@
-// App.tsx
-import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { LogBox } from 'react-native';
+import { LogBox, StatusBar } from 'react-native';
+import 'react-native-url-polyfill/auto';
 import { ThemeProvider } from './src/contexts/ThemeContext';
 import AppNavigator from './src/navigation/AppNavigator';
 
@@ -17,7 +16,7 @@ LogBox.ignoreLogs([
 export default function App() {
   return (
     <ThemeProvider>
-      <StatusBar style="auto" />
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <AppNavigator />
     </ThemeProvider>
   );

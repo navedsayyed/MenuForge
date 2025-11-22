@@ -29,7 +29,7 @@ const dishService = {
         category: dishData.category,
         images: imageUrls[0] || '' // Use first image URL only
       };
-      
+
       console.log('Creating dish document with data:', dishDocumentData);
 
       // Create dish document in database
@@ -92,14 +92,14 @@ const dishService = {
    * Update existing dish
    */
   async updateDish(
-    dishId: string, 
-    dishData: DishFormData & { restaurantId: string }, 
-    newImages: string[] = [], 
+    restaurantId: string,
+    dishId: string,
+    dishData: DishFormData,
+    newImages: string[] = [],
     existingImages: string[] = []
   ): Promise<Dish> {
     try {
-      const restaurantId = dishData.restaurantId;
-      
+
       // Upload new images if provided
       let uploadedImageUrls: string[] = [];
       if (newImages.length > 0) {
@@ -133,8 +133,12 @@ const dishService = {
   /**
    * Delete dish and all associated images
    */
-  async deleteDish(dishId: string, imageUrls: string[]): Promise<{ success: boolean; message: string }> {
+  async deleteDish(restaurantId: string, dishId: string): Promise<{ success: boolean; message: string }> {
     try {
+      // Get dish to find image URLs
+      const dish = await this.getDishById(dishId);
+      const imageUrls = dish.images ? [dish.images] : [];
+
       // Delete all images from storage
       if (imageUrls && imageUrls.length > 0) {
         await deleteImagesFromDish(imageUrls);

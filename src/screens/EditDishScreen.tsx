@@ -1,20 +1,20 @@
 // src/screens/EditDishScreen.tsx
 import { RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
+import { Asset, launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import authService from '../services/authService';
 import dishService from '../services/dishService';
 import { getImageUrl } from '../services/uploadService';
@@ -42,32 +42,21 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const categories: Category[] = ['Appetizer', 'Main Course', 'Dessert', 'Beverage', 'Other'];
 
-  const requestPermissions = async (): Promise<boolean> => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'We need camera roll permissions to upload images');
-      return false;
-    }
-    return true;
-  };
-
   const pickImages = async () => {
-    const hasPermission = await requestPermissions();
-    if (!hasPermission) return;
-
     const totalImages = existingImages.length + newImages.length;
 
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        allowsMultipleSelection: true,
+      const result = await launchImageLibrary({
+        mediaType: 'photo',
+        selectionLimit: 5 - totalImages,
         quality: 0.8,
-        aspect: [4, 3]
       });
 
-      if (!result.canceled) {
-        const selectedImages = result.assets || [result];
-        const newImageUris = selectedImages.map(img => img.uri);
-        
+      if (result.assets) {
+        const newImageUris = result.assets
+          .map((asset: Asset) => asset.uri)
+          .filter((uri): uri is string => uri !== undefined);
+
         if (totalImages + newImageUris.length > 5) {
           Alert.alert('Limit Exceeded', 'You can only have up to 5 images');
           return;
@@ -82,28 +71,25 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const takePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'We need camera permissions to take photos');
-      return;
-    }
-
     const totalImages = existingImages.length + newImages.length;
 
     try {
-      const result = await ImagePicker.launchCameraAsync({
+      const result = await launchCamera({
+        mediaType: 'photo',
         quality: 0.8,
-        aspect: [4, 3]
+        saveToPhotos: true,
       });
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
+      if (result.assets && result.assets.length > 0) {
         if (totalImages >= 5) {
           Alert.alert('Limit Exceeded', 'You can only have up to 5 images');
           return;
         }
 
         const photoUri = result.assets[0].uri;
-        setNewImages([...newImages, photoUri]);
+        if (photoUri) {
+          setNewImages([...newImages, photoUri]);
+        }
       }
     } catch (error) {
       console.error('Camera error:', error);
@@ -112,13 +98,13 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const removeExistingImage = (index: number) => {
-    const newExistingImages = existingImages.filter((_, i) => i !== index);
-    setExistingImages(newExistingImages);
+    const updatedImages = existingImages.filter((_, i) => i !== index);
+    setExistingImages(updatedImages);
   };
 
   const removeNewImage = (index: number) => {
-    const updatedNewImages = newImages.filter((_, i) => i !== index);
-    setNewImages(updatedNewImages);
+    const updatedImages = newImages.filter((_, i) => i !== index);
+    setNewImages(updatedImages);
   };
 
   const validateForm = (): boolean => {
@@ -142,7 +128,7 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
       return false;
     }
 
-    if (existingImages.length === 0 && newImages.length === 0) {
+    if (existingImages.length + newImages.length === 0) {
       Alert.alert('Validation Error', 'Please add at least one image');
       return false;
     }
@@ -157,7 +143,7 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
 
     try {
       const user = await authService.getCurrentUser();
-      
+
       if (!user) {
         Alert.alert('Error', 'User not authenticated');
         navigation.replace('Login');
@@ -165,15 +151,15 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
       }
 
       const dishData = {
-        restaurantId: user.restaurantId,
         name: name.trim(),
         description: description.trim(),
         price: parseFloat(price),
-        category: category,
+        category: category as Category,
         isAvailable: dish.isAvailable
       };
 
       await dishService.updateDish(
+        user.restaurantId,
         dish.$id,
         dishData,
         newImages,
@@ -198,12 +184,57 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   };
 
-  const totalImages = existingImages.length + newImages.length;
+  const handleDeleteDish = async () => {
+    Alert.alert(
+      'Delete Dish',
+      'Are you sure you want to delete this dish?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setLoading(true);
+            try {
+              const user = await authService.getCurrentUser();
+
+              if (!user) {
+                Alert.alert('Error', 'User not authenticated');
+                navigation.replace('Login');
+                return;
+              }
+
+              await dishService.deleteDish(user.restaurantId, dish.$id);
+
+              Alert.alert(
+                'Success',
+                'Dish deleted successfully!',
+                [
+                  {
+                    text: 'OK',
+                    onPress: () => navigation.goBack()
+                  }
+                ]
+              );
+            } catch (error: any) {
+              console.error('Delete dish error:', error);
+              Alert.alert('Error', error.message || 'Failed to delete dish');
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#FF6B6B" />
-      
+
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -212,7 +243,13 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
           <Text style={styles.backButtonText}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Dish</Text>
-        <View style={styles.backButton} />
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={handleDeleteDish}
+          disabled={loading}
+        >
+          <Text style={styles.deleteButtonText}>🗑️</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -281,15 +318,15 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
 
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Images * (Max 5)</Text>
-          
+
           {existingImages.length > 0 && (
             <>
-              <Text style={styles.subLabel}>Current Images</Text>
+              <Text style={styles.subLabel}>Existing Images</Text>
               <View style={styles.imageGrid}>
-                {existingImages.map((fileId, index) => (
+                {existingImages.map((imagePath, index) => (
                   <View key={`existing-${index}`} style={styles.imageItem}>
                     <Image
-                      source={{ uri: getImageUrl(fileId) || '' }}
+                      source={getImageUrl(imagePath) ? { uri: getImageUrl(imagePath)! } : require('../assets/placeholder.png')}
                       style={styles.imagePreview}
                     />
                     <TouchableOpacity
@@ -327,7 +364,7 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
             <TouchableOpacity
               style={styles.imageButton}
               onPress={pickImages}
-              disabled={loading || totalImages >= 5}
+              disabled={loading || (existingImages.length + newImages.length >= 5)}
             >
               <Text style={styles.imageButtonIcon}>🖼️</Text>
               <Text style={styles.imageButtonText}>Gallery</Text>
@@ -336,7 +373,7 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
             <TouchableOpacity
               style={styles.imageButton}
               onPress={takePhoto}
-              disabled={loading || totalImages >= 5}
+              disabled={loading || (existingImages.length + newImages.length >= 5)}
             >
               <Text style={styles.imageButtonIcon}>📷</Text>
               <Text style={styles.imageButtonText}>Camera</Text>
@@ -344,7 +381,7 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
           </View>
 
           <Text style={styles.imageHint}>
-            {totalImages}/5 images
+            {existingImages.length + newImages.length}/5 images
           </Text>
         </View>
 
@@ -390,6 +427,15 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold'
   },
+  deleteButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  deleteButtonText: {
+    fontSize: 24
+  },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
@@ -413,7 +459,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#7F8C8D',
     marginBottom: 8,
-    marginTop: 5
+    marginTop: 10
   },
   input: {
     backgroundColor: '#FFFFFF',

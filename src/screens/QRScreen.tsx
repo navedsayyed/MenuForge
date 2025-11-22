@@ -1,21 +1,20 @@
-// src/screens/QRScreen.tsx
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import * as Sharing from 'expo-sharing';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+import Share from 'react-native-share';
 import ViewShot from 'react-native-view-shot';
 import authService from '../services/authService';
 import dishService from '../services/dishService';
@@ -68,7 +67,7 @@ const QRScreen: React.FC<Props> = ({ navigation }) => {
 
   const fetchDishes = async () => {
     if (!userData) return;
-    
+
     try {
       setLoading(true);
       const fetchedDishes = await dishService.getDishes(userData.restaurantId);
@@ -88,27 +87,25 @@ const QRScreen: React.FC<Props> = ({ navigation }) => {
   const handleDownloadMenu = async () => {
     try {
       setGenerating(true);
-      
+
       // Capture the view as image
       if (viewShotRef.current && viewShotRef.current.capture) {
         const uri = await viewShotRef.current.capture();
-        
-        // Use sharing API which works with Expo Go
-        const canShare = await Sharing.isAvailableAsync();
-        if (canShare) {
-          await Sharing.shareAsync(uri, {
-            mimeType: 'image/jpeg',
-            dialogTitle: 'Save or Share Menu',
-            UTI: 'public.jpeg'
-          });
-          Alert.alert('Success', 'Menu image has been prepared for saving/sharing!');
-        } else {
-          Alert.alert('Error', 'Sharing is not available on this device');
-        }
+
+        // Use react-native-share
+        await Share.open({
+          url: uri,
+          title: 'Save or Share Menu',
+          message: 'Check out our menu!',
+          type: 'image/jpeg',
+        });
+        Alert.alert('Success', 'Menu image shared successfully!');
       }
     } catch (error: any) {
       console.error('Download menu error:', error);
-      Alert.alert('Error', `Failed to generate menu: ${error.message}`);
+      if (error.message !== 'User did not share') {
+        Alert.alert('Error', `Failed to generate menu: ${error.message}`);
+      }
     } finally {
       setGenerating(false);
     }
@@ -117,20 +114,24 @@ const QRScreen: React.FC<Props> = ({ navigation }) => {
   const handleShareMenu = async (uri?: string) => {
     try {
       let imageUri = uri;
-      
+
       if (!imageUri && viewShotRef.current && viewShotRef.current.capture) {
         imageUri = await viewShotRef.current.capture();
       }
-      
+
       if (imageUri) {
-        await Sharing.shareAsync(imageUri, {
-          mimeType: 'image/jpeg',
-          dialogTitle: 'Share Menu'
+        await Share.open({
+          url: imageUri,
+          title: 'Share Menu',
+          message: 'Check out our menu!',
+          type: 'image/jpeg',
         });
       }
     } catch (error: any) {
       console.error('Share menu error:', error);
-      Alert.alert('Error', `Failed to share menu: ${error.message}`);
+      if (error.message !== 'User did not share') {
+        Alert.alert('Error', `Failed to share menu: ${error.message}`);
+      }
     }
   };
 
@@ -145,15 +146,15 @@ const QRScreen: React.FC<Props> = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#FF6B6B" />
-      
+
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Menu & QR Code</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
         {/* Printable Menu View */}
-        <ViewShot 
-          ref={viewShotRef} 
+        <ViewShot
+          ref={viewShotRef}
           options={{ format: 'jpg', quality: 1.0 }}
           style={styles.menuPrintView}
         >
@@ -187,12 +188,12 @@ const QRScreen: React.FC<Props> = ({ navigation }) => {
                 {['Appetizer', 'Main Course', 'Dessert', 'Beverage', 'Other'].map((category) => {
                   const categoryDishes = dishes.filter((d) => d.category === category);
                   if (categoryDishes.length === 0) return null;
-                  
+
                   return (
                     <View key={category} style={styles.printCategory}>
                       <Text style={styles.printCategoryTitle}>{category}</Text>
                       <View style={styles.printCategoryDivider} />
-                      
+
                       {categoryDishes.map((dish) => (
                         <View key={dish.$id} style={styles.printDishItem}>
                           <View style={styles.printDishInfo}>
@@ -202,8 +203,8 @@ const QRScreen: React.FC<Props> = ({ navigation }) => {
                             </Text>
                           </View>
                           {dish.images && (
-                            <Image 
-                              source={{ uri: dish.images }} 
+                            <Image
+                              source={{ uri: dish.images }}
                               style={styles.printDishImage}
                               resizeMode="cover"
                             />
@@ -241,7 +242,7 @@ const QRScreen: React.FC<Props> = ({ navigation }) => {
               <Text style={styles.actionButtonText}>💾 Download Menu</Text>
             )}
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={[styles.actionButton, styles.shareButton]}
             onPress={() => handleShareMenu()}

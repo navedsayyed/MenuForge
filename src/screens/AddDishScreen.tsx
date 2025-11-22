@@ -1,19 +1,19 @@
 // src/screens/AddDishScreen.tsx
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
+import { Asset, launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import authService from '../services/authService';
 import dishService from '../services/dishService';
 import { Category } from '../types';
@@ -35,30 +35,19 @@ const AddDishScreen: React.FC<Props> = ({ navigation }) => {
 
   const categories: Category[] = ['Appetizer', 'Main Course', 'Dessert', 'Beverage', 'Other'];
 
-  const requestPermissions = async (): Promise<boolean> => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'We need camera roll permissions to upload images');
-      return false;
-    }
-    return true;
-  };
-
   const pickImages = async () => {
-    const hasPermission = await requestPermissions();
-    if (!hasPermission) return;
-
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        allowsMultipleSelection: true,
+      const result = await launchImageLibrary({
+        mediaType: 'photo',
+        selectionLimit: 5 - images.length,
         quality: 0.8,
-        aspect: [4, 3]
       });
 
-      if (!result.canceled) {
-        const selectedImages = result.assets || [result];
-        const newImages = selectedImages.map(img => img.uri);
-        
+      if (result.assets) {
+        const newImages = result.assets
+          .map((asset: Asset) => asset.uri)
+          .filter((uri): uri is string => uri !== undefined);
+
         if (images.length + newImages.length > 5) {
           Alert.alert('Limit Exceeded', 'You can only upload up to 5 images');
           return;
@@ -73,26 +62,23 @@ const AddDishScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const takePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'We need camera permissions to take photos');
-      return;
-    }
-
     try {
-      const result = await ImagePicker.launchCameraAsync({
+      const result = await launchCamera({
+        mediaType: 'photo',
         quality: 0.8,
-        aspect: [4, 3]
+        saveToPhotos: true,
       });
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
+      if (result.assets && result.assets.length > 0) {
         if (images.length >= 5) {
           Alert.alert('Limit Exceeded', 'You can only upload up to 5 images');
           return;
         }
 
         const photoUri = result.assets[0].uri;
-        setImages([...images, photoUri]);
+        if (photoUri) {
+          setImages([...images, photoUri]);
+        }
       }
     } catch (error) {
       console.error('Camera error:', error);
@@ -141,7 +127,7 @@ const AddDishScreen: React.FC<Props> = ({ navigation }) => {
 
     try {
       const user = await authService.getCurrentUser();
-      
+
       if (!user) {
         Alert.alert('Error', 'User not authenticated');
         navigation.replace('Login');
@@ -179,7 +165,7 @@ const AddDishScreen: React.FC<Props> = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#FF6B6B" />
-      
+
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -257,7 +243,7 @@ const AddDishScreen: React.FC<Props> = ({ navigation }) => {
 
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Images * (Max 5)</Text>
-          
+
           <View style={styles.imageGrid}>
             {images.map((uri, index) => (
               <View key={index} style={styles.imageItem}>

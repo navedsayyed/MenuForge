@@ -1,5 +1,5 @@
 // src/services/uploadService.ts
-import * as FileSystem from 'expo-file-system/legacy';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import { account, APPWRITE_CONFIG, ID, storage } from '../config/appwrite';
 
 // ============================================
@@ -8,12 +8,12 @@ import { account, APPWRITE_CONFIG, ID, storage } from '../config/appwrite';
 
 /**
  * Upload single image to Appwrite Storage
- * Using direct FileSystem.uploadAsync for React Native compatibility
+ * Using ReactNativeBlobUtil for React Native compatibility
  */
 export const uploadSingleImage = async (
   restaurantId: string,
-  dishId: string, 
-  imageUri: string, 
+  dishId: string,
+  imageUri: string,
   index: number
 ): Promise<string> => {
   try {
@@ -25,15 +25,18 @@ export const uploadSingleImage = async (
     // Use Appwrite SDK's storage.createFile which handles authentication automatically
     // We need to create a proper File object that works in React Native
     try {
-      // Read the file and create a blob
-      const base64 = await FileSystem.readAsStringAsync(imageUri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      
-      // Convert to binary string for blob
+      // Read the file as base64
+      const base64 = await ReactNativeBlobUtil.fs.readFile(imageUri, 'base64');
+
+      // Convert base64 to Uint8Array
       const binaryString = atob(base64);
-      const blob = new Blob([binaryString], { type: 'image/jpeg' });
-      
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      const blob = new Blob([bytes] as any, { type: 'image/jpeg' } as any);
+
       // Create a File-like object with the blob data
       const file = Object.assign(blob, {
         name: fileName,
@@ -54,34 +57,43 @@ export const uploadSingleImage = async (
     } catch (sdkError: any) {
       // SDK doesn't work in React Native, use direct API upload
       console.log('Using direct API upload method');
-      
+
       // Fallback: Try direct API upload with JWT token
       const jwt = await account.createJWT();
       console.log('Created JWT for upload');
-      
+
       const uploadUrl = `${APPWRITE_CONFIG.endpoint}/storage/buckets/${APPWRITE_CONFIG.bucketId}/files`;
-      
-      const uploadResult = await FileSystem.uploadAsync(uploadUrl, imageUri, {
-        httpMethod: 'POST',
-        uploadType: FileSystem.FileSystemUploadType.MULTIPART,
-        fieldName: 'file',
-        parameters: {
-          fileId: fileId,
-        },
-        headers: {
+
+      const uploadResult = await ReactNativeBlobUtil.fetch(
+        'POST',
+        uploadUrl,
+        {
           'X-Appwrite-Project': APPWRITE_CONFIG.projectId,
           'X-Appwrite-JWT': jwt.jwt,
+          'Content-Type': 'multipart/form-data',
         },
-      });
+        [
+          {
+            name: 'file',
+            filename: fileName,
+            type: 'image/jpeg',
+            data: ReactNativeBlobUtil.wrap(imageUri.replace('file://', '')),
+          },
+          {
+            name: 'fileId',
+            data: fileId,
+          },
+        ]
+      );
 
-      console.log('Upload result:', uploadResult.status);
+      console.log('Upload result:', uploadResult.respInfo.status);
 
-      if (uploadResult.status === 200 || uploadResult.status === 201) {
-        const responseData = JSON.parse(uploadResult.body);
+      if (uploadResult.respInfo.status === 200 || uploadResult.respInfo.status === 201) {
+        const responseData = JSON.parse(uploadResult.data);
         console.log('Image uploaded successfully via API:', responseData.$id);
         return responseData.$id;
       } else {
-        throw new Error(`Upload failed with status: ${uploadResult.status}, body: ${uploadResult.body}`);
+        throw new Error(`Upload failed with status: ${uploadResult.respInfo.status}, body: ${uploadResult.data}`);
       }
     }
   } catch (error: any) {
@@ -94,8 +106,8 @@ export const uploadSingleImage = async (
  * Upload multiple images to Appwrite Storage
  */
 export const uploadImages = async (
-  restaurantId: string, 
-  dishId: string, 
+  restaurantId: string,
+  dishId: string,
   imageUris: string[]
 ): Promise<string[]> => {
   try {
@@ -113,11 +125,11 @@ export const uploadImages = async (
     const fileIds = await Promise.all(uploadPromises);
 
     console.log('All images uploaded successfully:', fileIds);
-    
+
     // Convert file IDs to URLs
     const imageUrls = fileIds.map(fileId => getImageUrl(fileId)).filter(url => url !== null) as string[];
     console.log('Image URLs:', imageUrls);
-    
+
     return imageUrls;
   } catch (error: any) {
     console.error('Upload images error:', error);
@@ -131,7 +143,7 @@ export const uploadImages = async (
 export const getImageUrl = (fileId: string): string | null => {
   try {
     if (!fileId) return null;
-    
+
     const url = storage.getFileView(
       APPWRITE_CONFIG.bucketId,
       fileId
@@ -175,7 +187,7 @@ export const deleteImagesFromDish = async (
     const deletePromises = fileIds.map(fileId => deleteSingleImage(fileId));
     const results = await Promise.all(deletePromises);
 
-    const deletedCount = results.filter(r => r === true).length;
+    const deletedCount = results.filter((r: boolean) => r === true).length;
 
     console.log(`Successfully deleted ${deletedCount}/${fileIds.length} images`);
 
@@ -194,8 +206,8 @@ export const deleteImagesFromDish = async (
  * Get image preview URL with dimensions
  */
 export const getImagePreview = (
-  fileId: string, 
-  width: number = 500, 
+  fileId: string,
+  width: number = 500,
   height: number = 500
 ): string | null => {
   try {
@@ -221,7 +233,7 @@ export const getImagePreview = (
  * Validate image file (simplified for React Native)
  */
 export const validateImage = async (
-  uri: string, 
+  uri: string,
   maxSizeMB: number = 5
 ): Promise<{ valid: boolean; error?: string; size?: number }> => {
   try {

@@ -61,7 +61,7 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
 
   const fetchDishes = async () => {
     if (!userData) return;
-    
+
     try {
       setLoading(true);
       const fetchedDishes = await dishService.getDishes(userData.restaurantId);
@@ -91,7 +91,11 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await dishService.deleteDish(dish.$id, dish.images ? [dish.images] : []);
+              if (!userData) {
+                Alert.alert('Error', 'User not authenticated');
+                return;
+              }
+              await dishService.deleteDish(userData.restaurantId, dish.$id);
               Alert.alert('Success', 'Dish deleted successfully');
               fetchDishes();
             } catch (error) {
@@ -154,7 +158,7 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
               <Text style={styles.placeholderText}>🍽️</Text>
             </View>
           )}
-          
+
           <View style={[
             styles.availabilityBadge,
             item.isAvailable ? styles.availableBadge : styles.unavailableBadge
@@ -226,7 +230,7 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#FF6B6B" />
-      
+
       <View style={styles.header}>
         <View>
           <Text style={styles.headerTitle}>My Dishes</Text>
