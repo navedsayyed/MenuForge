@@ -7,6 +7,10 @@ import { User } from '../../../types';
 // Authentication Service
 // ============================================
 
+// DEVELOPMENT MODE: Set to true to always show login screen on app reload
+// Set to false for production (sessions will persist)
+const DEV_MODE = true; // Change to false for production
+
 const authService = {
   /**
    * Sign up new restaurant owner
@@ -120,24 +124,37 @@ const authService = {
    */
   async getCurrentUser(): Promise<User | null> {
     try {
-      // Try to get from local storage first
-      const userData = await AsyncStorage.getItem('userData');
-
-      if (userData) {
-        // Verify session is still valid
+      // In development mode, always clear sessions to force login
+      if (DEV_MODE) {
         try {
-          await account.get();
-          return JSON.parse(userData);
-        } catch (error) {
-          // Session expired, clear local data
-          await AsyncStorage.removeItem('userData');
-          return null;
+          await account.deleteSession('current');
+        } catch (e) {
+          // No session to delete
         }
+        await AsyncStorage.removeItem('userData');
+        return null;
       }
 
-      return null;
+      // Production mode: Check for valid session
+      try {
+        await account.get();
+        // Session is valid, now get user data from storage
+        const userData = await AsyncStorage.getItem('userData');
+        if (userData) {
+          return JSON.parse(userData);
+        }
+        // Session exists but no local data, clear session
+        await account.deleteSession('current');
+        return null;
+      } catch (error) {
+        // No active session, clear any stale local data
+        await AsyncStorage.removeItem('userData');
+        return null;
+      }
     } catch (error) {
       console.error('Get current user error:', error);
+      // On any error, clear local data to prevent auto-login with stale data
+      await AsyncStorage.removeItem('userData');
       return null;
     }
   },

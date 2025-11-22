@@ -2,13 +2,13 @@
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useEffect } from 'react';
 import {
-    ActivityIndicator,
-    StatusBar,
-    StyleSheet,
-    Text,
-    View
+  ActivityIndicator,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View
 } from 'react-native';
-import authService from '../services/authService';
+import authService from '../features/auth/services/authService';
 import { RootStackParamList } from '../types/navigation';
 
 type SplashScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Splash'>;
@@ -41,7 +41,7 @@ const SplashScreen: React.FC<Props> = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#FF6B6B" />
-      
+
       <View style={styles.logoContainer}>
         <View style={styles.iconCircle}>
           <Text style={styles.iconText}>🍽️</Text>
