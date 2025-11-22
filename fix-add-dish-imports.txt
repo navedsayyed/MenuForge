@@ -1,0 +1,26 @@
+// src/screens/AddDishScreen.tsx
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import { Asset, launchCamera, launchImageLibrary } from 'react-native-image-picker';
+import authService from '../../auth/services/authService';
+import dishService from '../services/dishService';
+import { Category } from '../../../types';
+import { RootStackParamList } from '../../../types/navigation';
+
+type AddDishScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'AddDish'>;
+
+interface Props {
+  navigation: AddDishScreenNavigationProp;
+}
