@@ -54,3 +54,25 @@ export const UserIcon = (props: SvgProps) => (
         <Circle cx={12} cy={7} r={4} />
     </Svg>
 );
+
+export const BackIcon = (props: SvgProps) => (
+    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <Path d="M19 12H5" />
+        <Path d="M12 19l-7-7 7-7" />
+    </Svg>
+);
+
+export const GalleryIcon = (props: SvgProps) => (
+    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <Path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2z" />
+        <Path d="M8.5 10a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
+        <Path d="M21 15l-5-5L5 21" />
+    </Svg>
+);
+
+export const CameraIcon = (props: SvgProps) => (
+    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <Path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+        <Circle cx={12} cy={13} r={4} />
+    </Svg>
+);

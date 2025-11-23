@@ -14,7 +14,8 @@ import {
   View
 } from 'react-native';
 import { Asset, launchCamera, launchImageLibrary } from 'react-native-image-picker';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BackIcon, CameraIcon, GalleryIcon } from '../../../components/common/Icons';
 import { Category } from '../../../types';
 import { RootStackParamList } from '../../../types/navigation';
 import authService from '../../auth/services/authService';
@@ -163,22 +164,28 @@ const AddDishScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar barStyle="light-content" backgroundColor="#FF6B6B" />
+  const insets = useSafeAreaInsets();
 
-      <View style={styles.header}>
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+
+      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backButtonText}>←</Text>
+          <BackIcon color="#FFFFFF" width={24} height={24} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Add New Dish</Text>
         <View style={styles.backButton} />
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+      >
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Dish Name *</Text>
           <TextInput
@@ -265,7 +272,7 @@ const AddDishScreen: React.FC<Props> = ({ navigation }) => {
               onPress={pickImages}
               disabled={loading || images.length >= 5}
             >
-              <Text style={styles.imageButtonIcon}>🖼️</Text>
+              <GalleryIcon color="#2C3E50" width={24} height={24} style={{ marginBottom: 5 }} />
               <Text style={styles.imageButtonText}>Gallery</Text>
             </TouchableOpacity>
 
@@ -274,7 +281,7 @@ const AddDishScreen: React.FC<Props> = ({ navigation }) => {
               onPress={takePhoto}
               disabled={loading || images.length >= 5}
             >
-              <Text style={styles.imageButtonIcon}>📷</Text>
+              <CameraIcon color="#2C3E50" width={24} height={24} style={{ marginBottom: 5 }} />
               <Text style={styles.imageButtonText}>Camera</Text>
             </TouchableOpacity>
           </View>
@@ -298,7 +305,7 @@ const AddDishScreen: React.FC<Props> = ({ navigation }) => {
 
         <View style={styles.bottomPadding} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

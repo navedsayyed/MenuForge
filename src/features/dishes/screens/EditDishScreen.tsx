@@ -15,7 +15,8 @@ import {
   View
 } from 'react-native';
 import { Asset, launchCamera, launchImageLibrary } from 'react-native-image-picker';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BackIcon, CameraIcon, DeleteIcon, GalleryIcon } from '../../../components/common/Icons';
 import { Category } from '../../../types';
 import { RootStackParamList } from '../../../types/navigation';
 import authService from '../../auth/services/authService';
@@ -232,16 +233,18 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
     );
   };
 
-  return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar barStyle="light-content" backgroundColor="#FF6B6B" />
+  const insets = useSafeAreaInsets();
 
-      <View style={styles.header}>
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+
+      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backButtonText}>←</Text>
+          <BackIcon color="#FFFFFF" width={24} height={24} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Dish</Text>
         <TouchableOpacity
@@ -249,11 +252,15 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
           onPress={handleDeleteDish}
           disabled={loading}
         >
-          <Text style={styles.deleteButtonText}>🗑️</Text>
+          <DeleteIcon color="#FFFFFF" width={24} height={24} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+      >
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Dish Name *</Text>
           <TextInput
@@ -367,7 +374,7 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
               onPress={pickImages}
               disabled={loading || (existingImages.length + newImages.length >= 5)}
             >
-              <Text style={styles.imageButtonIcon}>🖼️</Text>
+              <GalleryIcon color="#2C3E50" width={24} height={24} style={{ marginBottom: 5 }} />
               <Text style={styles.imageButtonText}>Gallery</Text>
             </TouchableOpacity>
 
@@ -376,7 +383,7 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
               onPress={takePhoto}
               disabled={loading || (existingImages.length + newImages.length >= 5)}
             >
-              <Text style={styles.imageButtonIcon}>📷</Text>
+              <CameraIcon color="#2C3E50" width={24} height={24} style={{ marginBottom: 5 }} />
               <Text style={styles.imageButtonText}>Camera</Text>
             </TouchableOpacity>
           </View>
@@ -400,7 +407,7 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
 
         <View style={styles.bottomPadding} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
