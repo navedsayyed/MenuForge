@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
+  Image,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -13,11 +14,12 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import RNPrint from 'react-native-print';
 import QRCode from 'react-native-qrcode-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Share from 'react-native-share';
 import ViewShot from 'react-native-view-shot';
-import { CopyIcon, DownloadIcon, ShareIcon } from '../../../components/common/Icons';
+import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon, ShareIcon } from '../../../components/common/Icons';
 import { APP_CONFIG } from '../../../constants/config';
 import { Dish, User } from '../../../types';
 import { MainTabParamList, RootStackParamList } from '../../../types/navigation';
@@ -33,17 +35,17 @@ interface Props {
   navigation: QRScreenNavigationProp;
 }
 
-type TemplateType = 'classic' | 'modern' | 'minimal';
-
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
+// A4 Aspect Ratio is roughly 1:1.414
+const PAGE_WIDTH = width - 40;
+const PAGE_HEIGHT = PAGE_WIDTH * 1.414;
 
 const QRScreen: React.FC<Props> = ({ navigation }) => {
   const [userData, setUserData] = useState<User | null>(null);
-  const [menuUrl, setMenuUrl] = useState('');
-  const [dishes, setDishes] = useState<Dish[]>([]);
+  const [availableDishes, setAvailableDishes] = useState<Dish[]>([]);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<TemplateType>('modern');
+  const [currentPage, setCurrentPage] = useState(0);
 
   const viewShotRef = useRef<ViewShot>(null);
   const insets = useSafeAreaInsets();
@@ -63,9 +65,6 @@ const QRScreen: React.FC<Props> = ({ navigation }) => {
       const user = await authService.getCurrentUser();
       if (user) {
         setUserData(user);
-        // In a real app, this would be a dynamic link
-        const url = `${APP_CONFIG.WEB_URL}/menu/${user.restaurantId}`;
-        setMenuUrl(url);
       } else {
         navigation.replace('Login');
       }
@@ -81,7 +80,9 @@ const QRScreen: React.FC<Props> = ({ navigation }) => {
     try {
       setLoading(true);
       const fetchedDishes = await dishService.getDishes(userData.restaurantId);
-      setDishes(fetchedDishes);
+      // Filter only available dishes
+      const active = fetchedDishes.filter((d: Dish) => d.isAvailable);
+      setAvailableDishes(active);
     } catch (error) {
       console.error('Fetch dishes error:', error);
     } finally {
@@ -89,184 +90,284 @@ const QRScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  const handleCopyUrl = () => {
-    // In a real app, use Clipboard.setString(menuUrl);
-    Alert.alert('Copied!', 'Menu URL copied to clipboard.');
-  };
+  // Chunk dishes into groups of 3
+  const pages: Dish[][] = [];
+  for (let i = 0; i < availableDishes.length; i += 3) {
+    pages.push(availableDishes.slice(i, i + 3));
+  }
 
-  const handleDownloadMenu = async () => {
+  const handleSavePage = async () => {
     try {
       setGenerating(true);
       if (viewShotRef.current && viewShotRef.current.capture) {
         const uri = await viewShotRef.current.capture();
         await Share.open({
           url: uri,
-          title: 'Save Menu',
-          message: `Check out the menu for ${userData?.restaurantName}!`,
+          title: 'Save Menu Page',
+          message: `Menu Page ${currentPage + 1} - ${userData?.restaurantName}`,
           type: 'image/jpeg',
         });
       }
     } catch (error: any) {
       if (error.message !== 'User did not share') {
-        Alert.alert('Error', 'Failed to save menu image');
+        Alert.alert('Error', 'Failed to save menu page');
       }
     } finally {
       setGenerating(false);
     }
   };
 
-  const handleShareMenu = async () => {
+  const handleSharePage = async () => {
     try {
       setGenerating(true);
       if (viewShotRef.current && viewShotRef.current.capture) {
         const uri = await viewShotRef.current.capture();
         await Share.open({
           url: uri,
-          title: 'Share Menu',
-          message: `Check out the menu for ${userData?.restaurantName}!`,
+          title: 'Share Menu Page',
+          message: `Check out our menu! Page ${currentPage + 1}`,
           type: 'image/jpeg',
         });
       }
     } catch (error: any) {
+      // Ignore user cancelled
     } finally {
       setGenerating(false);
     }
   };
 
-  const renderTemplateSelector = () => (
-    <View style={styles.templateSelector}>
-      <Text style={styles.sectionTitle}>Choose Style</Text>
-      <View style={styles.templateButtons}>
-        {(['classic', 'modern', 'minimal'] as TemplateType[]).map((type) => (
-          <TouchableOpacity
-            key={type}
-            style={[
-              styles.templateButton,
-              selectedTemplate === type && styles.templateButtonActive
-            ]}
-            onPress={() => setSelectedTemplate(type)}
-          >
-            <Text style={[
-              styles.templateButtonText,
-              selectedTemplate === type && styles.templateButtonTextActive
-            ]}>
-              {type.charAt(0).toUpperCase() + type.slice(1)}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
+  const generateFullMenuPDF = async () => {
+    try {
+      setGenerating(true);
 
-  const renderPreview = () => {
-    if (!userData) return null;
+      // Build HTML for all pages
+      let htmlContent = `
+        <html>
+          <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              body { 
+                font-family: 'Helvetica', 'Arial', sans-serif; 
+                margin: 0; 
+                padding: 20px;
+                background: white;
+              }
+              .page { 
+                page-break-after: always; 
+                padding: 30px 20px;
+                margin-bottom: 40px;
+              }
+              .page:last-child {
+                page-break-after: auto;
+              }
+              .header { 
+                text-align: center; 
+                border-bottom: 3px solid #FF6B6B; 
+                padding-bottom: 15px; 
+                margin-bottom: 25px; 
+              }
+              .restaurant-name { 
+                font-size: 28px; 
+                font-weight: bold; 
+                color: #2C3E50; 
+                text-transform: uppercase; 
+                letter-spacing: 2px;
+                margin: 0;
+              }
+              .subtitle { 
+                font-size: 12px; 
+                color: #7F8C8D; 
+                margin-top: 8px;
+                font-style: italic;
+              }
+              .dish-row { 
+                display: flex; 
+                align-items: center; 
+                margin-bottom: 20px; 
+                border-bottom: 1px solid #E0E0E0; 
+                padding-bottom: 15px;
+              }
+              .dish-details { 
+                flex: 1;
+              }
+              .dish-name { 
+                font-size: 18px; 
+                font-weight: bold; 
+                color: #2C3E50; 
+                margin-bottom: 4px;
+              }
+              .dish-category { 
+                font-size: 11px; 
+                color: #FF6B6B; 
+                font-weight: bold; 
+                text-transform: uppercase; 
+                margin-bottom: 4px;
+              }
+              .dish-price { 
+                font-size: 16px; 
+                font-weight: bold; 
+                color: #2C3E50;
+              }
+              .qr-note {
+                font-size: 10px;
+                color: #95A5A6;
+                font-style: italic;
+                margin-top: 4px;
+              }
+              .footer { 
+                text-align: center;
+                margin-top: 30px;
+                padding-top: 15px;
+                border-top: 1px solid #E0E0E0;
+                font-size: 11px;
+                color: #95A5A6;
+              }
+              .website { 
+                color: #FF6B6B; 
+                font-weight: bold;
+                margin-top: 5px;
+              }
+            </style>
+          </head>
+          <body>
+      `;
 
-    // Template Styles
-    const isModern = selectedTemplate === 'modern';
-    const isMinimal = selectedTemplate === 'minimal';
-    const isClassic = selectedTemplate === 'classic';
+      // Add each page
+      for (let i = 0; i < pages.length; i++) {
+        const pageDishes = pages[i];
+        htmlContent += `
+          <div class="page">
+            <div class="header">
+              <h1 class="restaurant-name">${userData?.restaurantName || 'Restaurant Menu'}</h1>
+              <p class="subtitle">Complete Menu - Page ${i + 1} of ${pages.length}</p>
+            </div>
+            
+            <div class="dishes">
+              ${pageDishes.map((dish: Dish) => `
+                <div class="dish-row">
+                  <div class="dish-details">
+                    <div class="dish-name">${dish.name}</div>
+                    <div class="dish-category">${dish.category}</div>
+                    <div class="dish-price">₹${dish.price.toFixed(2)}</div>
+                    <div class="qr-note">Scan QR code in app to view photo</div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
 
-    const bgColors = {
-      classic: '#FFFFFF',
-      modern: '#2C3E50',
-      minimal: '#F8F9FA'
-    };
+            <div class="footer">
+              <div>Page ${i + 1} of ${pages.length}</div>
+              <div class="website">${APP_CONFIG.WEB_URL.replace('https://', '')}</div>
+            </div>
+          </div>
+        `;
+      }
 
-    const textColors = {
-      classic: '#2C3E50',
-      modern: '#FFFFFF',
-      minimal: '#333333'
-    };
+      htmlContent += `</body></html>`;
 
-    const accentColor = '#FF6B6B';
+      // Print/Save as PDF
+      await RNPrint.print({
+        html: htmlContent,
+      });
 
+    } catch (error: any) {
+      console.error('PDF Generation Error:', error);
+      Alert.alert('Error', 'Failed to generate PDF menu');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < pages.length - 1) {
+      setCurrentPage(prev => prev + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 0) {
+      setCurrentPage(prev => prev - 1);
+    }
+  };
+
+  const renderMenuPage = ({ item: pageDishes, index }: { item: Dish[], index: number }) => {
     return (
-      <ViewShot
-        ref={viewShotRef}
-        options={{ format: 'jpg', quality: 1.0 }}
-        style={[
-          styles.previewCard,
-          { backgroundColor: bgColors[selectedTemplate] }
-        ]}
-      >
-        {/* Header Decoration */}
-        {isModern && (
-          <View style={styles.modernHeaderDeco} />
-        )}
-
-        <View style={styles.previewContent}>
-          {/* Restaurant Info */}
-          <View style={styles.previewHeader}>
-            <Text style={[
-              styles.previewTitle,
-              { color: textColors[selectedTemplate] },
-              isMinimal && { fontWeight: '300', letterSpacing: 2 }
-            ]}>
-              {userData.restaurantName}
-            </Text>
-            <Text style={[
-              styles.previewSubtitle,
-              { color: isModern ? '#BDC3C7' : '#7F8C8D' }
-            ]}>
-              Scan to view our digital menu
-            </Text>
-          </View>
-
-          {/* QR Code */}
-          <View style={[
-            styles.qrContainer,
-            isModern && styles.qrContainerModern,
-            isClassic && styles.qrContainerClassic,
-            isMinimal && styles.qrContainerMinimal
-          ]}>
-            <QRCode
-              value={menuUrl || 'https://example.com'}
-              size={180}
-              color={isModern ? '#2C3E50' : '#000000'}
-              backgroundColor="#FFFFFF"
-              quietZone={10}
-            />
-            {/* Logo Overlay (Optional) */}
-            <View style={styles.qrLogoOverlay}>
-              <Text style={{ fontSize: 24 }}>🍽️</Text>
-            </View>
-          </View>
-
-          {/* Footer / Call to Action */}
-          <View style={styles.previewFooter}>
-            <Text style={[
-              styles.previewFooterText,
-              { color: isModern ? '#ECF0F1' : '#2C3E50' }
-            ]}>
-              {dishes.length} Dishes Available
-            </Text>
-
-            {!isMinimal && (
-              <View style={[
-                styles.divider,
-                { backgroundColor: isModern ? 'rgba(255,255,255,0.2)' : '#E0E0E0' }
-              ]} />
-            )}
-
-            <Text style={[
-              styles.urlText,
-              { color: accentColor }
-            ]}>
-              {APP_CONFIG.WEB_URL.replace('https://', '')}
-            </Text>
-          </View>
+      <View style={styles.pageContainer}>
+        <View style={styles.menuHeader}>
+          <Text style={styles.restaurantName}>{userData?.restaurantName}</Text>
+          <Text style={styles.menuSubtitle}>Scan QR code to see dish photo</Text>
         </View>
-      </ViewShot>
+
+        <View style={styles.dishesContainer}>
+          {pageDishes.map((dish) => (
+            <View key={dish.$id} style={styles.dishRow}>
+              {/* Dish Image */}
+              <View style={styles.dishImageContainer}>
+                {dish.images ? (
+                  <Image source={{ uri: dish.images }} style={styles.dishImage} resizeMode="cover" />
+                ) : (
+                  <View style={[styles.dishImage, styles.placeholderImage]} />
+                )}
+              </View>
+
+              {/* Dish Details */}
+              <View style={styles.dishDetails}>
+                <Text style={styles.dishName} numberOfLines={2}>{dish.name}</Text>
+                <Text style={styles.dishCategory}>{dish.category}</Text>
+                <Text style={styles.dishPrice}>₹{dish.price.toFixed(2)}</Text>
+              </View>
+
+              {/* QR Code */}
+              <View style={styles.qrContainer}>
+                <QRCode
+                  value={dish.images || 'https://example.com'} // Link to dish image
+                  size={80}
+                  color="#2C3E50"
+                  backgroundColor="#FFFFFF"
+                />
+                <Text style={styles.scanMeText}>Scan Me</Text>
+              </View>
+            </View>
+          ))}
+
+          {/* Fill empty spots if less than 3 dishes */}
+          {Array.from({ length: 3 - pageDishes.length }).map((_, i) => (
+            <View key={`empty-${i}`} style={[styles.dishRow, { opacity: 0 }]} />
+          ))}
+        </View>
+
+        <View style={styles.pageFooter}>
+          <Text style={styles.pageNumber}>Page {index + 1} of {pages.length}</Text>
+          <Text style={styles.websiteUrl}>{APP_CONFIG.WEB_URL.replace('https://', '')}</Text>
+        </View>
+      </View>
     );
   };
 
-  if (!userData) {
+  if (loading && !userData) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#FF6B6B" />
       </View>
     );
   }
+
+  if (availableDishes.length === 0) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+        <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
+          <Text style={styles.headerTitle}>Menu Generator</Text>
+        </View>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No available dishes found.</Text>
+          <Text style={styles.emptySubtext}>Mark dishes as 'Available' in the Dashboard to generate a menu.</Text>
+        </View>
+      </View>
+    );
+  }
+
+  const currentDishes = pages[currentPage] || [];
 
   return (
     <View style={styles.container}>
@@ -275,52 +376,79 @@ const QRScreen: React.FC<Props> = ({ navigation }) => {
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
         <Text style={styles.headerTitle}>Menu Generator</Text>
+        <Text style={styles.headerSubtitle}>{availableDishes.length} Available Dishes</Text>
       </View>
 
+      {/* Main Content Area */}
       <ScrollView
-        style={styles.content}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {renderTemplateSelector()}
 
-        <Text style={styles.sectionTitle}>Live Preview</Text>
-        <View style={styles.previewContainer}>
-          {renderPreview()}
+        {/* Menu Page Preview */}
+        <View style={styles.previewWrapper}>
+          <ViewShot ref={viewShotRef} options={{ format: 'jpg', quality: 1.0 }} style={{ backgroundColor: '#fff' }}>
+            {renderMenuPage({ item: currentDishes, index: currentPage })}
+          </ViewShot>
         </View>
 
-        <Text style={styles.sectionTitle}>Actions</Text>
+        {/* Navigation Controls */}
+        <View style={styles.controlsContainer}>
+          <TouchableOpacity
+            style={[styles.navButton, currentPage === 0 && styles.navButtonDisabled]}
+            onPress={handlePrevPage}
+            disabled={currentPage === 0}
+          >
+            <ChevronLeftIcon color={currentPage === 0 ? "#BDC3C7" : "#2C3E50"} width={24} height={24} />
+          </TouchableOpacity>
+
+          <Text style={styles.pageIndicator}>
+            Page {currentPage + 1} of {pages.length}
+          </Text>
+
+          <TouchableOpacity
+            style={[styles.navButton, currentPage === pages.length - 1 && styles.navButtonDisabled]}
+            onPress={handleNextPage}
+            disabled={currentPage === pages.length - 1}
+          >
+            <ChevronRightIcon color={currentPage === pages.length - 1 ? "#BDC3C7" : "#2C3E50"} width={24} height={24} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Action Buttons */}
         <View style={styles.actionsGrid}>
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={handleDownloadMenu}
+            onPress={handleSavePage}
             disabled={generating}
           >
             <View style={[styles.iconCircle, { backgroundColor: '#E8F5E9' }]}>
               <DownloadIcon color="#2ECC71" width={24} height={24} />
             </View>
-            <Text style={styles.actionText}>Save Image</Text>
+            <Text style={styles.actionText}>Save Page</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={handleShareMenu}
+            onPress={generateFullMenuPDF}
+            disabled={generating}
+          >
+            <View style={[styles.iconCircle, { backgroundColor: '#FFF3E0' }]}>
+              <DownloadIcon color="#FF9800" width={24} height={24} />
+            </View>
+            <Text style={styles.actionText}>Full PDF</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={handleSharePage}
             disabled={generating}
           >
             <View style={[styles.iconCircle, { backgroundColor: '#E3F2FD' }]}>
               <ShareIcon color="#3498DB" width={24} height={24} />
             </View>
-            <Text style={styles.actionText}>Share Menu</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionCard}
-            onPress={handleCopyUrl}
-          >
-            <View style={[styles.iconCircle, { backgroundColor: '#FFF3E0' }]}>
-              <CopyIcon color="#F39C12" width={24} height={24} />
-            </View>
-            <Text style={styles.actionText}>Copy Link</Text>
+            <Text style={styles.actionText}>Share Page</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -350,184 +478,199 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 5,
-    marginBottom: 20
+    zIndex: 10
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#FFFFFF'
   },
-  content: {
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
+    marginTop: 4
+  },
+  scrollView: {
     flex: 1,
-    paddingHorizontal: 20
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#2C3E50',
-    marginBottom: 12,
-    marginLeft: 4
-  },
-  templateSelector: {
-    marginBottom: 24
-  },
-  templateButtons: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2
-  },
-  templateButton: {
-    flex: 1,
-    paddingVertical: 10,
+  scrollContent: {
     alignItems: 'center',
-    borderRadius: 8
+    paddingTop: 20,
+    paddingBottom: 40
   },
-  templateButtonActive: {
-    backgroundColor: '#FF6B6B',
-    shadowColor: '#FF6B6B',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2
-  },
-  templateButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#7F8C8D'
-  },
-  templateButtonTextActive: {
-    color: '#FFFFFF'
-  },
-  previewContainer: {
-    alignItems: 'center',
-    marginBottom: 30
-  },
-  previewCard: {
-    width: width - 60,
-    borderRadius: 20,
-    padding: 30,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
-    overflow: 'hidden'
-  },
-  modernHeaderDeco: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 8,
-    backgroundColor: '#FF6B6B'
-  },
-  previewContent: {
-    width: '100%',
-    alignItems: 'center'
-  },
-  previewHeader: {
-    alignItems: 'center',
-    marginBottom: 24
-  },
-  previewTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 8
-  },
-  previewSubtitle: {
-    fontSize: 13,
-    textAlign: 'center'
-  },
-  qrContainer: {
-    padding: 10,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    marginBottom: 24,
-    position: 'relative'
-  },
-  qrContainerModern: {
-    borderRadius: 20,
+  previewWrapper: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+    marginBottom: 20
   },
-  qrContainerClassic: {
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8
+  pageContainer: {
+    width: PAGE_WIDTH,
+    height: PAGE_HEIGHT,
+    backgroundColor: '#FFFFFF',
+    padding: 20,
+    justifyContent: 'space-between'
   },
-  qrContainerMinimal: {
-    padding: 0,
-    backgroundColor: 'transparent'
+  menuHeader: {
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: '#FF6B6B',
+    paddingBottom: 15,
+    marginBottom: 10
   },
-  qrLogoOverlay: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    width: 40,
-    height: 40,
-    marginLeft: -20,
-    marginTop: -20,
+  restaurantName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#2C3E50',
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 1
+  },
+  menuSubtitle: {
+    fontSize: 12,
+    color: '#7F8C8D',
+    marginTop: 5,
+    fontStyle: 'italic'
+  },
+  dishesContainer: {
+    flex: 1,
+    justifyContent: 'space-evenly'
+  },
+  dishRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+    height: '30%'
+  },
+  dishImageContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#F0F0F0'
+  },
+  dishImage: {
+    width: '100%',
+    height: '100%'
+  },
+  placeholderImage: {
+    backgroundColor: '#E0E0E0'
+  },
+  dishDetails: {
+    flex: 1,
+    paddingHorizontal: 15,
+    justifyContent: 'center'
+  },
+  dishName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2C3E50',
+    marginBottom: 4
+  },
+  dishCategory: {
+    fontSize: 10,
+    color: '#FF6B6B',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    marginBottom: 4
+  },
+  dishPrice: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2C3E50'
+  },
+  qrContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 5,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1
+  },
+  scanMeText: {
+    fontSize: 8,
+    color: '#7F8C8D',
+    marginTop: 4,
+    fontWeight: '600'
+  },
+  pageFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+    paddingTop: 10,
+    marginTop: 10
+  },
+  pageNumber: {
+    fontSize: 10,
+    color: '#95A5A6'
+  },
+  websiteUrl: {
+    fontSize: 10,
+    color: '#FF6B6B',
+    fontWeight: 'bold'
+  },
+  controlsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    width: '100%',
+    paddingHorizontal: 20
+  },
+  navButton: {
+    padding: 10,
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3
+    elevation: 2
   },
-  previewFooter: {
-    width: '100%',
-    alignItems: 'center'
+  navButtonDisabled: {
+    opacity: 0.5,
+    backgroundColor: '#F5F5F5'
   },
-  previewFooterText: {
-    fontSize: 14,
+  pageIndicator: {
+    marginHorizontal: 20,
+    fontSize: 16,
     fontWeight: '600',
-    marginBottom: 12
-  },
-  divider: {
-    width: 40,
-    height: 2,
-    borderRadius: 1,
-    marginBottom: 12
-  },
-  urlText: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1
+    color: '#2C3E50'
   },
   actionsGrid: {
     flexDirection: 'row',
-    gap: 12
+    gap: 15,
+    paddingHorizontal: 20,
+    width: '100%',
+    justifyContent: 'center'
   },
   actionCard: {
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 16,
+    paddingVertical: 20,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    maxWidth: 150
   },
   iconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10
@@ -535,7 +678,26 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#2C3E50'
+    color: '#2C3E50',
+    textAlign: 'center'
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2C3E50',
+    marginBottom: 10,
+    textAlign: 'center'
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#7F8C8D',
+    textAlign: 'center'
   }
 });
 
