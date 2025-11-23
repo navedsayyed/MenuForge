@@ -27,7 +27,8 @@ const dishService = {
         description: dishData.description,
         price: parseFloat(dishData.price.toString()),
         category: dishData.category,
-        images: imageUrls[0] || '' // Use first image URL only
+        images: imageUrls[0] || '', // Use first image URL only
+        isAvailable: dishData.isAvailable !== undefined ? dishData.isAvailable : true // Default to available
       };
 
       console.log('Creating dish document with data:', dishDocumentData);
@@ -119,7 +120,8 @@ const dishService = {
           description: dishData.description,
           price: parseFloat(dishData.price.toString()),
           category: dishData.category,
-          images: allImageUrls[0] || '' // Use first image URL only
+          images: allImageUrls[0] || '', // Use first image URL only
+          isAvailable: dishData.isAvailable !== undefined ? dishData.isAvailable : true // Preserve availability
         }
       );
 
@@ -159,13 +161,28 @@ const dishService = {
   },
 
   /**
-   * Toggle dish availability (disabled - not supported by collection)
+   * Toggle dish availability
    */
   async toggleAvailability(dishId: string, isAvailable: boolean): Promise<Dish> {
-    // Note: isAvailable field doesn't exist in the dishes collection
-    // This function is disabled but kept for backward compatibility
-    console.warn('toggleAvailability is not supported - isAvailable field does not exist in collection');
-    return this.getDishById(dishId);
+    try {
+      console.log(`Toggling availability for dish ${dishId} to ${isAvailable}`);
+
+      // Update the isAvailable field in the database
+      const updatedDish = await databases.updateDocument(
+        APPWRITE_CONFIG.databaseId,
+        APPWRITE_CONFIG.dishesCollectionId,
+        dishId,
+        {
+          isAvailable: isAvailable
+        }
+      );
+
+      console.log('Availability updated successfully');
+      return updatedDish as unknown as Dish;
+    } catch (error: any) {
+      console.error('Toggle availability error:', error);
+      throw new Error(error.message || 'Failed to update availability');
+    }
   },
 
   /**
