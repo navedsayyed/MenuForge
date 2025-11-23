@@ -14,8 +14,8 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import RNPrint from 'react-native-print';
 import QRCode from 'react-native-qrcode-svg';
+import RNPrint from 'react-native-print';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Share from 'react-native-share';
 import ViewShot from 'react-native-view-shot';
@@ -96,51 +96,10 @@ const QRScreen: React.FC<Props> = ({ navigation }) => {
     pages.push(availableDishes.slice(i, i + 3));
   }
 
-  const handleSavePage = async () => {
-    try {
-      setGenerating(true);
-      if (viewShotRef.current && viewShotRef.current.capture) {
-        const uri = await viewShotRef.current.capture();
-        await Share.open({
-          url: uri,
-          title: 'Save Menu Page',
-          message: `Menu Page ${currentPage + 1} - ${userData?.restaurantName}`,
-          type: 'image/jpeg',
-        });
-      }
-    } catch (error: any) {
-      if (error.message !== 'User did not share') {
-        Alert.alert('Error', 'Failed to save menu page');
-      }
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  const handleSharePage = async () => {
-    try {
-      setGenerating(true);
-      if (viewShotRef.current && viewShotRef.current.capture) {
-        const uri = await viewShotRef.current.capture();
-        await Share.open({
-          url: uri,
-          title: 'Share Menu Page',
-          message: `Check out our menu! Page ${currentPage + 1}`,
-          type: 'image/jpeg',
-        });
-      }
-    } catch (error: any) {
-      // Ignore user cancelled
-    } finally {
-      setGenerating(false);
-    }
-  };
-
   const generateFullMenuPDF = async () => {
     try {
       setGenerating(true);
 
-      // Build HTML for all pages
       let htmlContent = `
         <html>
           <head>
@@ -232,7 +191,6 @@ const QRScreen: React.FC<Props> = ({ navigation }) => {
           <body>
       `;
 
-      // Add each page
       for (let i = 0; i < pages.length; i++) {
         const pageDishes = pages[i];
         htmlContent += `
@@ -265,7 +223,6 @@ const QRScreen: React.FC<Props> = ({ navigation }) => {
 
       htmlContent += `</body></html>`;
 
-      // Print/Save as PDF
       await RNPrint.print({
         html: htmlContent,
       });
@@ -273,6 +230,46 @@ const QRScreen: React.FC<Props> = ({ navigation }) => {
     } catch (error: any) {
       console.error('PDF Generation Error:', error);
       Alert.alert('Error', 'Failed to generate PDF menu');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleSavePage = async () => {
+    try {
+      setGenerating(true);
+      if (viewShotRef.current && viewShotRef.current.capture) {
+        const uri = await viewShotRef.current.capture();
+        await Share.open({
+          url: uri,
+          title: 'Save Menu Page',
+          message: `Menu Page ${currentPage + 1} - ${userData?.restaurantName}`,
+          type: 'image/jpeg',
+        });
+      }
+    } catch (error: any) {
+      if (error.message !== 'User did not share') {
+        Alert.alert('Error', 'Failed to save menu page');
+      }
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleSharePage = async () => {
+    try {
+      setGenerating(true);
+      if (viewShotRef.current && viewShotRef.current.capture) {
+        const uri = await viewShotRef.current.capture();
+        await Share.open({
+          url: uri,
+          title: 'Share Menu Page',
+          message: `Check out our menu! Page ${currentPage + 1}`,
+          type: 'image/jpeg',
+        });
+      }
+    } catch (error: any) {
+      // Ignore user cancelled
     } finally {
       setGenerating(false);
     }
@@ -665,7 +662,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
-    maxWidth: 150
+    maxWidth: 120
   },
   iconCircle: {
     width: 50,
