@@ -98,3 +98,31 @@ export const CopyIcon = (props: SvgProps) => (
         <Path d="M8 17.929H6c-1.105 0-2-.912-2-2.036V5.036C4 3.91 4.895 3 6 3h8c1.105 0 2 .911 2 2.036v1.866m-6 .17h8c1.105 0 2 .91 2 2.035v10.857C20 21.09 19.105 22 18 22h-8c-1.105 0-2-.911-2-2.036V9.107c0-1.124.895-2.036 2-2.036z" />
     </Svg>
 );
+
+export const ChevronRightIcon = (props: SvgProps) => (
+    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <Path d="M9 18l6-6-6-6" />
+    </Svg>
+);
+
+export const StarIcon = (props: SvgProps) => (
+    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <Path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+    </Svg>
+);
+
+export const WalletIcon = (props: SvgProps) => (
+    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <Path d="M20 12V8H6a2 2 0 01-2-2 2 2 0 012-2h12v4" />
+        <Path d="M4 6v12a2 2 0 002 2h14a2 2 0 002-2V12a2 2 0 00-2-2H6.966" />
+        <Path d="M16 12h.01" />
+    </Svg>
+);
+
+export const LogoutIcon = (props: SvgProps) => (
+    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <Path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+        <Path d="M16 17l5-5-5-5" />
+        <Path d="M21 12H9" />
+    </Svg>
+);

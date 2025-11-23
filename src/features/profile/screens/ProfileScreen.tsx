@@ -1,25 +1,29 @@
-// src/screens/ProfileScreen.tsx
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Animated,
-  Dimensions,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
+  Switch,
   Text,
-  TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { APPWRITE_CONFIG, databases } from '../../../api/client/appwrite';
+import {
+  ChevronRightIcon,
+  DishIcon,
+  EditIcon,
+  LogoutIcon,
+  StarIcon,
+  UserIcon
+} from '../../../components/common/Icons';
+import { APP_CONFIG } from '../../../constants/config';
 import { useTheme } from '../../../providers/AuthProvider';
 import { User } from '../../../types';
 import { MainTabParamList, RootStackParamList } from '../../../types/navigation';
@@ -44,12 +48,9 @@ interface RestaurantInfo {
 }
 
 const ProfileScreen: React.FC<Props> = ({ navigation }) => {
-  const { themeMode, setThemeMode, isDark, colors } = useTheme();
+  const { themeMode, setThemeMode, isDark } = useTheme();
   const [userData, setUserData] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const slideAnim = useRef(new Animated.Value(Dimensions.get('window').width)).current;
   const [restaurantInfo, setRestaurantInfo] = useState<RestaurantInfo>({
     name: '',
     address: '',
@@ -58,18 +59,11 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
     location: '',
     description: ''
   });
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     loadUserData();
   }, []);
-
-  useEffect(() => {
-    Animated.timing(slideAnim, {
-      toValue: showSettings ? 0 : Dimensions.get('window').width,
-      duration: 300,
-      useNativeDriver: true
-    }).start();
-  }, [showSettings]);
 
   const loadUserData = async () => {
     try {
@@ -110,38 +104,6 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  const handleSave = async () => {
-    if (!userData) return;
-
-    if (!restaurantInfo.name.trim()) {
-      Alert.alert('Error', 'Restaurant name is required');
-      return;
-    }
-
-    try {
-      setSaving(true);
-      await databases.updateDocument(
-        APPWRITE_CONFIG.databaseId,
-        APPWRITE_CONFIG.restaurantsCollectionId,
-        userData.restaurantId,
-        {
-          name: restaurantInfo.name.trim(),
-          address: restaurantInfo.address.trim(),
-          phone: restaurantInfo.phone.trim(),
-          timing: restaurantInfo.timing.trim(),
-          location: restaurantInfo.location.trim(),
-          description: restaurantInfo.description.trim()
-        }
-      );
-      Alert.alert('Success', 'Restaurant information updated successfully');
-    } catch (error) {
-      console.error('Save error:', error);
-      Alert.alert('Error', 'Failed to update restaurant information');
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleLogout = () => {
     Alert.alert(
       'Logout',
@@ -165,185 +127,239 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
     );
   };
 
+  const renderMenuItem = (
+    icon: React.ReactNode,
+    title: string,
+    subtitle?: string,
+    rightElement?: React.ReactNode,
+    onPress?: () => void,
+    isLast?: boolean
+  ) => (
+    <TouchableOpacity
+      style={[styles.menuItem, isLast && styles.menuItemLast]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <View style={styles.menuIconContainer}>
+        {icon}
+      </View>
+      <View style={styles.menuContent}>
+        <View style={styles.menuTextContainer}>
+          <Text style={styles.menuTitle}>{title}</Text>
+          {subtitle && <Text style={styles.menuSubtitle}>{subtitle}</Text>}
+        </View>
+        {rightElement || <ChevronRightIcon color="#CBD5E0" width={20} height={20} />}
+      </View>
+    </TouchableOpacity>
+  );
+
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading profile...</Text>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#FF6B6B" />
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.primary }]} edges={['top']}>
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.primary} />
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <TouchableOpacity
-          style={styles.settingsButton}
-          onPress={() => setShowSettings(!showSettings)}
-        >
-          <Text style={styles.settingsButtonText}>⚙️</Text>
-        </TouchableOpacity>
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+        <View style={styles.headerContent}>
+          <View style={styles.userInfo}>
+            <Text style={styles.userName}>{userData?.name || 'Owner'}</Text>
+            <Text style={styles.restaurantName}>{restaurantInfo.name || 'Restaurant Name'}</Text>
+          </View>
+          <View style={styles.avatarContainer}>
+            <Text style={styles.avatarText}>
+              {userData?.name?.charAt(0).toUpperCase() || 'O'}
+            </Text>
+          </View>
+        </View>
       </View>
 
-      <View style={[styles.flex, { backgroundColor: colors.background }]}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.flex}
-        >
-          <ScrollView contentContainerStyle={styles.content}>
-            {/* User Info Section */}
-            <View style={[styles.userSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <View style={[styles.avatarContainer, { backgroundColor: colors.primary }]}>
-                <Text style={styles.avatarText}>
-                  {userData?.name?.charAt(0).toUpperCase() || '👤'}
-                </Text>
-              </View>
-              <Text style={[styles.userName, { color: colors.text }]}>{userData?.name}</Text>
-              <Text style={[styles.userEmail, { color: colors.textSecondary }]}>{userData?.email}</Text>
-            </View>
-
-
-
-            {/* Restaurant Information Form */}
-            <View style={[styles.formSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>🏪 Restaurant Information</Text>
-
-              <View style={styles.inputGroup}>
-                <Text style={[styles.label, { color: colors.text }]}>Restaurant Name *</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                  value={restaurantInfo.name}
-                  onChangeText={(text) => setRestaurantInfo({ ...restaurantInfo, name: text })}
-                  placeholder="Enter restaurant name"
-                  placeholderTextColor={colors.inactive}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={[styles.label, { color: colors.text }]}>Address</Text>
-                <TextInput
-                  style={[styles.input, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                  value={restaurantInfo.address}
-                  onChangeText={(text) => setRestaurantInfo({ ...restaurantInfo, address: text })}
-                  placeholder="Enter full address"
-                  placeholderTextColor={colors.inactive}
-                  multiline
-                  numberOfLines={3}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={[styles.label, { color: colors.text }]}>Phone Number</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                  value={restaurantInfo.phone}
-                  onChangeText={(text) => setRestaurantInfo({ ...restaurantInfo, phone: text })}
-                  placeholder="+91 XXXXX XXXXX"
-                  placeholderTextColor={colors.inactive}
-                  keyboardType="phone-pad"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={[styles.label, { color: colors.text }]}>Operating Hours</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                  value={restaurantInfo.timing}
-                  onChangeText={(text) => setRestaurantInfo({ ...restaurantInfo, timing: text })}
-                  placeholder="e.g., Mon-Sun: 10:00 AM - 10:00 PM"
-                  placeholderTextColor={colors.inactive}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={[styles.label, { color: colors.text }]}>Location / Area</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                  value={restaurantInfo.location}
-                  onChangeText={(text) => setRestaurantInfo({ ...restaurantInfo, location: text })}
-                  placeholder="e.g., MG Road, Bangalore"
-                  placeholderTextColor={colors.inactive}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={[styles.label, { color: colors.text }]}>Description</Text>
-                <TextInput
-                  style={[styles.input, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                  value={restaurantInfo.description}
-                  onChangeText={(text) => setRestaurantInfo({ ...restaurantInfo, description: text })}
-                  placeholder="Tell customers about your restaurant"
-                  placeholderTextColor={colors.inactive}
-                  multiline
-                  numberOfLines={4}
-                />
-              </View>
-
-              <TouchableOpacity
-                style={[styles.saveButton, { backgroundColor: colors.primary }, saving && styles.saveButtonDisabled]}
-                onPress={handleSave}
-                disabled={saving}
-              >
-                {saving ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.saveButtonText}>💾 Save Changes</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-
-            {/* Logout Button */}
-            <TouchableOpacity
-              style={[styles.logoutButton, { backgroundColor: colors.card, borderColor: colors.error }]}
-              onPress={handleLogout}
-            >
-              <Text style={[styles.logoutButtonText, { color: colors.error }]}>🚪 Logout</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </View>
-
-      {/* Settings Drawer Overlay */}
-      {showSettings && (
-        <TouchableOpacity
-          style={styles.overlay}
-          activeOpacity={1}
-          onPress={() => setShowSettings(false)}
-        >
-          <View style={{ flex: 1 }} />
-        </TouchableOpacity>
-      )}
-
-      {/* Settings Drawer */}
-      <Animated.View
-        style={[
-          styles.drawer,
-          {
-            backgroundColor: colors.background,
-            transform: [{ translateX: slideAnim }]
-          }
-        ]}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.drawerHeader, { backgroundColor: colors.primary, borderBottomColor: colors.border }]}>
-          <Text style={styles.drawerTitle}>⚙️ Settings</Text>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={() => setShowSettings(false)}
-          >
-            <Text style={styles.closeButtonText}>✕</Text>
-          </TouchableOpacity>
+        {/* Subscription Banner */}
+        <TouchableOpacity style={styles.premiumBanner} activeOpacity={0.9}>
+          <View style={styles.premiumContent}>
+            <View style={styles.premiumIconContainer}>
+              <Text style={{ fontSize: 16 }}>👑</Text>
+            </View>
+            <View>
+              <Text style={styles.premiumText}>Premium Plan</Text>
+              <Text style={styles.premiumSubtext}>Active until Dec 2025</Text>
+            </View>
+          </View>
+          <ChevronRightIcon color="#FFFFFF" width={20} height={20} />
+        </TouchableOpacity>
+
+        {/* Quick Stats Row */}
+        <View style={styles.statsRow}>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{restaurantInfo.name ? '✓' : '✗'}</Text>
+            <Text style={styles.statLabel}>Profile</Text>
+          </View>
+
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>0</Text>
+            <Text style={styles.statLabel}>Total Orders</Text>
+          </View>
+
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>4.8★</Text>
+            <Text style={styles.statLabel}>Rating</Text>
+          </View>
         </View>
 
-        <ScrollView style={styles.drawerContent}>
-          <View style={styles.drawerSection}>
-            <Text style={[styles.comingSoonText, { color: colors.textSecondary }]}>Coming Soon...</Text>
-          </View>
-        </ScrollView>
-      </Animated.View>
-    </SafeAreaView>
+        {/* Restaurant Management */}
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionIndicator} />
+          <Text style={styles.sectionTitle}>Restaurant Management</Text>
+        </View>
+
+        <View style={styles.menuSection}>
+          {renderMenuItem(
+            <EditIcon color="#4A5568" width={22} height={22} />,
+            "Restaurant Settings",
+            "Edit name, address, hours",
+            undefined,
+            () => Alert.alert('Info', 'Restaurant settings coming soon!')
+          )}
+
+          {renderMenuItem(
+            <DishIcon color="#4A5568" width={22} height={22} />,
+            "Menu Management",
+            "Manage dishes & categories",
+            undefined,
+            () => navigation.navigate('DashboardTab')
+          )}
+
+          {renderMenuItem(
+            <Text style={{ fontSize: 20 }}>📊</Text>,
+            "Analytics & Reports",
+            "View sales & performance",
+            undefined,
+            () => Alert.alert('Info', 'Analytics coming soon!')
+          )}
+
+          {renderMenuItem(
+            <Text style={{ fontSize: 20 }}>👥</Text>,
+            "Staff Management",
+            "Manage team access",
+            undefined,
+            () => Alert.alert('Info', 'Staff management coming soon!'),
+            true
+          )}
+        </View>
+
+        {/* Business Tools */}
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionIndicator} />
+          <Text style={styles.sectionTitle}>Business Tools</Text>
+        </View>
+
+        <View style={styles.menuSection}>
+          {renderMenuItem(
+            <Text style={{ fontSize: 20 }}>🎟️</Text>,
+            "QR Code Generator",
+            "Generate menu QR codes",
+            undefined,
+            () => navigation.navigate('QRTab')
+          )}
+          {renderMenuItem(
+            <Text style={{ fontSize: 20 }}>💳</Text>,
+            "Subscription & Billing",
+            "Manage your plan",
+            undefined,
+            () => Alert.alert('Info', 'Billing coming soon!')
+          )}
+          {renderMenuItem(
+            <Text style={{ fontSize: 20 }}>📢</Text>,
+            "Promotions & Offers",
+            "Create special deals",
+            undefined,
+            () => Alert.alert('Info', 'Promotions coming soon!'),
+            true
+          )}
+        </View>
+
+        {/* Settings & Support */}
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionIndicator} />
+          <Text style={styles.sectionTitle}>Settings & Support</Text>
+        </View>
+
+        <View style={styles.menuSection}>
+          {renderMenuItem(
+            <UserIcon color="#4A5568" width={22} height={22} />,
+            "Account Settings",
+            "Update profile & password",
+            undefined,
+            () => Alert.alert('Info', 'Account settings coming soon!')
+          )}
+
+          {renderMenuItem(
+            <Text style={{ fontSize: 20 }}>🎨</Text>,
+            "Appearance",
+            isDark ? "Dark Mode" : "Light Mode",
+            <Switch
+              value={isDark}
+              onValueChange={() => setThemeMode(isDark ? 'light' : 'dark')}
+              trackColor={{ false: "#E2E8F0", true: "#C6F6D5" }}
+              thumbColor={isDark ? "#48BB78" : "#F7FAFC"}
+            />
+          )}
+
+          {renderMenuItem(
+            <Text style={{ fontSize: 20 }}>�</Text>,
+            "Notifications",
+            "Manage alerts",
+            undefined,
+            () => Alert.alert('Info', 'Notification settings coming soon!')
+          )}
+
+          {renderMenuItem(
+            <Text style={{ fontSize: 20 }}>❓</Text>,
+            "Help & Support",
+            "FAQs, Contact us",
+            undefined,
+            () => Alert.alert('Info', 'Support coming soon!')
+          )}
+
+          {renderMenuItem(
+            <StarIcon color="#4A5568" width={22} height={22} />,
+            "Rate Our App",
+            "Share your feedback",
+            undefined,
+            () => Alert.alert('Thank you!', 'We appreciate your feedback!'),
+            true
+          )}
+        </View>
+
+        {/* Logout */}
+        <View style={[styles.menuSection, { marginTop: 20, marginBottom: 40 }]}>
+          {renderMenuItem(
+            <LogoutIcon color="#E53E3E" width={22} height={22} />,
+            "Logout",
+            undefined,
+            <ChevronRightIcon color="#E53E3E" width={20} height={20} />,
+            handleLogout,
+            true
+          )}
+        </View>
+
+        <Text style={styles.versionText}>
+          {APP_CONFIG.NAME} v{APP_CONFIG.VERSION}
+        </Text>
+
+      </ScrollView>
+    </View>
   );
 };
 
@@ -352,286 +368,202 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8F9FA'
   },
-  flex: {
-    flex: 1
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#F8F9FA'
   },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#7F8C8D'
-  },
   header: {
-    backgroundColor: '#FF6B6B',
-    padding: 20,
-    paddingTop: 40,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F2F6'
+  },
+  headerContent: {
     flexDirection: 'row',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  userInfo: {
+    flex: 1
+  },
+  userName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#2D3748',
+    marginBottom: 4
+  },
+  restaurantName: {
+    fontSize: 14,
+    color: '#718096',
+    fontWeight: '500'
+  },
+  avatarContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#E2E8F0',
+    justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 4
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  settingsButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  settingsButtonText: {
-    fontSize: 24,
-    color: '#FFFFFF'
-  },
-  backButtonText: {
-    fontSize: 28,
-    color: '#FFFFFF',
-    fontWeight: 'bold'
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    flex: 1
-  },
-  content: {
-    padding: 20,
-    paddingBottom: 100
-  },
-  userSection: {
-    alignItems: 'center',
-    marginBottom: 30,
-    backgroundColor: '#FFFFFF',
-    padding: 30,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3
-  },
-  avatarContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#FF6B6B',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 15
+    elevation: 2
   },
   avatarText: {
-    fontSize: 36,
-    color: '#FFFFFF',
-    fontWeight: 'bold'
-  },
-  userName: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 5
+    color: '#4A5568'
   },
-  userEmail: {
-    fontSize: 14,
-    color: '#7F8C8D'
+  scrollView: {
+    flex: 1
   },
-  settingsSection: {
-    backgroundColor: '#FFFFFF',
-    padding: 20,
-    borderRadius: 16,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3
-  },
-  formSection: {
-    backgroundColor: '#FFFFFF',
-    padding: 20,
-    borderRadius: 16,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 20
-  },
-  inputGroup: {
-    marginBottom: 20
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2C3E50',
-    marginBottom: 8
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: '#2C3E50',
-    backgroundColor: '#F8F9FA'
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top'
-  },
-  saveButton: {
-    backgroundColor: '#FF6B6B',
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 10
-  },
-  saveButtonDisabled: {
-    opacity: 0.6
-  },
-  saveButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF'
-  },
-  logoutButton: {
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#E74C3C',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3
-  },
-  logoutButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#E74C3C'
-  },
-  themeOptions: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 8
-  },
-  themeOption: {
-    flex: 1,
-    padding: 16,
+  premiumBanner: {
+    margin: 16,
+    backgroundColor: '#1A202C',
     borderRadius: 12,
-    borderWidth: 2,
-    alignItems: 'center',
-    position: 'relative'
-  },
-  themeOptionActive: {
-    borderColor: '#FF6B6B',
-    backgroundColor: 'rgba(255, 107, 107, 0.1)'
-  },
-  themeIcon: {
-    fontSize: 28,
-    marginBottom: 8
-  },
-  themeLabel: {
-    fontSize: 14,
-    fontWeight: '600'
-  },
-  checkmark: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    fontSize: 16,
-    color: '#FF6B6B',
-    fontWeight: 'bold'
-  },
-  themeHint: {
-    fontSize: 12,
-    marginTop: 8,
-    fontStyle: 'italic'
-  },
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    zIndex: 999
-  },
-  drawer: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    width: '80%',
-    maxWidth: 320,
-    shadowColor: '#000',
-    shadowOffset: { width: -2, height: 0 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 10,
-    zIndex: 1000
-  },
-  drawerHeader: {
+    padding: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    paddingTop: 40,
-    borderBottomWidth: 1
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4
   },
-  drawerTitle: {
+  premiumContent: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  premiumIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12
+  },
+  premiumText: {
+    color: '#F6E05E',
+    fontSize: 16,
+    fontWeight: 'bold'
+  },
+  premiumSubtext: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    marginTop: 2
+  },
+  statsRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    marginBottom: 24,
+    gap: 12
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1
+  },
+  statValue: {
     fontSize: 20,
+    color: '#2D3748',
     fontWeight: 'bold',
-    color: '#FFFFFF'
+    marginBottom: 4
   },
-  closeButton: {
+  statLabel: {
+    fontSize: 11,
+    color: '#718096',
+    fontWeight: '600',
+    textAlign: 'center'
+  },
+  menuSection: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    borderRadius: 16,
+    paddingVertical: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+    marginBottom: 24
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F7FAFC'
+  },
+  menuItemLast: {
+    borderBottomWidth: 0
+  },
+  menuIconContainer: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#F7FAFC',
     justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16
+  },
+  menuContent: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center'
   },
-  closeButtonText: {
-    fontSize: 20,
-    color: '#FFFFFF',
-    fontWeight: 'bold'
-  },
-  drawerContent: {
+  menuTextContainer: {
     flex: 1
   },
-  drawerSection: {
-    padding: 20
-  },
-  drawerLabel: {
+  menuTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    color: '#2D3748',
+    fontWeight: '500'
+  },
+  menuSubtitle: {
+    fontSize: 12,
+    color: '#718096',
+    marginTop: 2
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
     marginBottom: 12
   },
-  comingSoonText: {
-    fontSize: 18,
-    fontStyle: 'italic',
+  sectionIndicator: {
+    width: 3,
+    height: 16,
+    backgroundColor: '#FF6B6B',
+    borderRadius: 2,
+    marginRight: 8
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2D3748'
+  },
+  versionText: {
     textAlign: 'center',
-    marginTop: 40
+    color: '#CBD5E0',
+    fontSize: 12,
+    marginBottom: 20
   }
 });
 
