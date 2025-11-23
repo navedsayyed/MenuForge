@@ -9,7 +9,7 @@ import { User } from '../../../types';
 
 // DEVELOPMENT MODE: Set to true to always show login screen on app reload
 // Set to false for production (sessions will persist)
-const DEV_MODE = true; // Change to false for production
+const DEV_MODE = false; // Change to false for production
 
 // Track if we've already handled the DEV_MODE logout for this session
 let hasDevModeRun = false;

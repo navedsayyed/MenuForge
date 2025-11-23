@@ -1,13 +1,14 @@
 // src/screens/DashboardScreen.tsx
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { CompositeNavigationProp } from '@react-navigation/native';
+import { CompositeNavigationProp, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
+  Animated,
   Image,
+  Platform,
   RefreshControl,
   StatusBar,
   StyleSheet,
@@ -15,7 +16,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Dish, User } from '../../../types';
 import { MainTabParamList, RootStackParamList } from '../../../types/navigation';
 import authService from '../../auth/services/authService';
@@ -35,6 +36,40 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userData, setUserData] = useState<User | null>(null);
+  const [statusBarStyle, setStatusBarStyle] = useState<'light-content' | 'dark-content'>('light-content');
+
+  const insets = useSafeAreaInsets();
+
+  // Animation Values
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const HEADER_MAX_HEIGHT = 200;
+  // Dynamic height: Top inset + 80 (50px search bar + 15px padding top/bottom)
+  const HEADER_MIN_HEIGHT = (insets.top > 0 ? insets.top : (Platform.OS === 'ios' ? 40 : 20)) + 80;
+  const SCROLL_DISTANCE = HEADER_MAX_HEIGHT - HEADER_MIN_HEIGHT;
+
+  // Use focus effect to ensure status bar is transparent on Android
+  useFocusEffect(
+    useCallback(() => {
+      StatusBar.setBarStyle('light-content');
+      if (Platform.OS === 'android') {
+        StatusBar.setTranslucent(true);
+        StatusBar.setBackgroundColor('transparent');
+      }
+    }, [])
+  );
+
+  useEffect(() => {
+    const listener = scrollY.addListener(({ value }) => {
+      const shouldBeDark = value > SCROLL_DISTANCE / 2;
+      // Imperatively update for faster/more reliable response
+      StatusBar.setBarStyle(shouldBeDark ? 'dark-content' : 'light-content');
+      setStatusBarStyle(shouldBeDark ? 'dark-content' : 'light-content');
+    });
+
+    return () => {
+      scrollY.removeListener(listener);
+    };
+  }, [SCROLL_DISTANCE]);
 
   useEffect(() => {
     loadUserData();
@@ -219,6 +254,43 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
     </View>
   );
 
+  // Animation Interpolations
+  const headerHeight = scrollY.interpolate({
+    inputRange: [0, SCROLL_DISTANCE],
+    outputRange: [HEADER_MAX_HEIGHT, HEADER_MIN_HEIGHT],
+    extrapolate: 'clamp'
+  });
+
+  const headerBackgroundColor = scrollY.interpolate({
+    inputRange: [0, SCROLL_DISTANCE],
+    outputRange: ['#FF6B6B', '#FFFFFF'],
+    extrapolate: 'clamp'
+  });
+
+  const headerTitleColor = scrollY.interpolate({
+    inputRange: [0, SCROLL_DISTANCE],
+    outputRange: ['#FFFFFF', '#2C3E50'],
+    extrapolate: 'clamp'
+  });
+
+  const headerTitleOpacity = scrollY.interpolate({
+    inputRange: [0, SCROLL_DISTANCE / 2],
+    outputRange: [1, 0],
+    extrapolate: 'clamp'
+  });
+
+  const headerSubtitleOpacity = scrollY.interpolate({
+    inputRange: [0, SCROLL_DISTANCE / 2],
+    outputRange: [1, 0],
+    extrapolate: 'clamp'
+  });
+
+  const searchBarWidth = scrollY.interpolate({
+    inputRange: [0, SCROLL_DISTANCE],
+    outputRange: ['100%', '90%'],
+    extrapolate: 'clamp'
+  });
+
   if (loading && !refreshing) {
     return (
       <View style={styles.loadingContainer}>
@@ -229,42 +301,80 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="light-content" backgroundColor="#FF6B6B" />
+    <View style={styles.container}>
+      <StatusBar
+        barStyle={statusBarStyle}
+        backgroundColor="transparent"
+        translucent={true}
+      />
 
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>My Dishes</Text>
-          <Text style={styles.headerSubtitle}>
-            {userData?.restaurantName || 'Restaurant'}
-          </Text>
-        </View>
-        {/* <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={handleLogout}
-          >
-            <Text style={styles.headerButtonText}>🚪</Text>
-          </TouchableOpacity>
-        </View> */}
-      </View>
-
-      <View style={styles.contentContainer}>
-        <FlatList
-          data={dishes}
-          renderItem={renderDishCard}
-          keyExtractor={(item) => item.$id}
-          contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={['#FF6B6B']}
-            />
+      {/* Animated Header */}
+      <Animated.View
+        style={[
+          styles.header,
+          {
+            height: headerHeight,
+            backgroundColor: headerBackgroundColor,
+            zIndex: 1000,
+            elevation: 5
           }
-          ListEmptyComponent={renderEmptyList}
-        />
-      </View>
+        ]}
+      >
+        <SafeAreaView edges={['top']} style={{ flex: 1 }}>
+          <View style={styles.headerContent}>
+            <View style={styles.headerTopRow}>
+              <View>
+                <Animated.Text style={[styles.headerTitle, { opacity: headerTitleOpacity, color: '#FFFFFF' }]}>
+                  My Dishes
+                </Animated.Text>
+                <Animated.Text style={[styles.headerSubtitle, { opacity: headerSubtitleOpacity }]}>
+                  {userData?.restaurantName || 'Restaurant'}
+                </Animated.Text>
+              </View>
+              {/* Add profile/actions here if needed */}
+            </View>
+
+            {/* Search Bar */}
+            <Animated.View
+              style={[
+                styles.searchContainer,
+                {
+                  width: searchBarWidth,
+                  // transform: [{ translateY: searchBarY }] // Removed translation
+                }
+              ]}
+            >
+              <Text style={styles.searchIcon}>🔍</Text>
+              <Text style={styles.searchText}>Search "Biryani"...</Text>
+            </Animated.View>
+          </View>
+        </SafeAreaView>
+      </Animated.View>
+
+      {/* Content */}
+      <Animated.FlatList
+        data={dishes}
+        renderItem={renderDishCard}
+        keyExtractor={(item) => item.$id}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingTop: HEADER_MAX_HEIGHT + 20 }
+        ]}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+        scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#FF6B6B']}
+            progressViewOffset={HEADER_MAX_HEIGHT}
+          />
+        }
+        ListEmptyComponent={renderEmptyList}
+      />
 
       <TouchableOpacity
         style={styles.fab}
@@ -272,18 +382,14 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FF6B6B' // Set to primary color for status bar area
-  },
-  contentContainer: {
-    flex: 1,
-    backgroundColor: '#F8F9FA' // Restore light background for content
+    backgroundColor: '#F8F9FA'
   },
   loadingContainer: {
     flex: 1,
@@ -297,39 +403,58 @@ const styles = StyleSheet.create({
     color: '#7F8C8D'
   },
   header: {
-    backgroundColor: '#FF6B6B',
-    padding: 20,
-    paddingTop: 40,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4
+  },
+  headerContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingBottom: 15,
+    justifyContent: 'flex-end'
+  },
+  headerTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20
+    marginBottom: 15
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#FFFFFF'
   },
   headerSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.9)',
     marginTop: 4
   },
-  headerActions: {
+  searchContainer: {
     flexDirection: 'row',
-    gap: 10
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    height: 50,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2
   },
-  headerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center'
+  searchIcon: {
+    fontSize: 18,
+    marginRight: 10,
+    color: '#95A5A6'
   },
-  headerButtonText: {
-    fontSize: 20
+  searchText: {
+    fontSize: 16,
+    color: '#95A5A6'
   },
   listContent: {
     padding: 15,
