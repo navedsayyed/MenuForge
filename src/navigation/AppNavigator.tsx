@@ -3,12 +3,13 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
-import { Platform, StyleSheet, Text } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MainTabParamList, RootStackParamList } from '../types/navigation';
 
 // Screens
 // Screens
+import { HomeIcon, QRIcon, UserIcon } from '../components/common/Icons';
 import LoginScreen from '../features/auth/screens/LoginScreen';
 import SignupScreen from '../features/auth/screens/SignupScreen';
 import AddDishScreen from '../features/dishes/screens/AddDishScreen';
@@ -31,8 +32,9 @@ const MainTabs: React.FC = () => {
         headerShown: false,
         tabBarStyle: {
           ...styles.tabBar,
-          height: 60 + (Platform.OS === 'android' ? insets.bottom : 0), // Add safe area inset
-          paddingBottom: Platform.OS === 'android' ? insets.bottom : 0, // Push content up
+          height: Platform.OS === 'android' ? 70 + insets.bottom : 90,
+          paddingBottom: Platform.OS === 'android' ? insets.bottom + 10 : 30,
+          paddingTop: 10,
         },
         tabBarActiveTintColor: '#FF6B6B',
         tabBarInactiveTintColor: '#95A5A6',
@@ -45,8 +47,8 @@ const MainTabs: React.FC = () => {
         component={DashboardScreen}
         options={{
           tabBarLabel: 'Dashboard',
-          tabBarIcon: ({ focused }) => (
-            <Text style={[styles.icon, focused && styles.iconActive]}>🏠</Text>
+          tabBarIcon: ({ color, focused }) => (
+            <HomeIcon color={color} width={24} height={24} strokeWidth={focused ? 2.5 : 2} />
           )
         }}
       />
@@ -55,8 +57,8 @@ const MainTabs: React.FC = () => {
         component={QRScreen}
         options={{
           tabBarLabel: 'Generate QR',
-          tabBarIcon: ({ focused }) => (
-            <Text style={[styles.icon, focused && styles.iconActive]}>📱</Text>
+          tabBarIcon: ({ color, focused }) => (
+            <QRIcon color={color} width={24} height={24} strokeWidth={focused ? 2.5 : 2} />
           )
         }}
       />
@@ -65,8 +67,8 @@ const MainTabs: React.FC = () => {
         component={ProfileScreen}
         options={{
           tabBarLabel: 'Profile',
-          tabBarIcon: ({ focused }) => (
-            <Text style={[styles.icon, focused && styles.iconActive]}>👤</Text>
+          tabBarIcon: ({ color, focused }) => (
+            <UserIcon color={color} width={24} height={24} strokeWidth={focused ? 2.5 : 2} />
           )
         }}
       />
@@ -99,29 +101,22 @@ const styles = StyleSheet.create({
   tabBar: {
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-    paddingTop: 8,
+    borderTopColor: '#F0F0F0',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 4
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 8
   },
   tabLabel: {
-    fontSize: 11,
-    fontWeight: '500',
-    marginTop: 2
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4
   },
   tabIcon: {
-    marginBottom: 2
+    marginTop: 4
   },
-  icon: {
-    fontSize: 22,
-    opacity: 0.5
-  },
-  iconActive: {
-    opacity: 1
-  }
+  // Removed old icon styles
 });
 
 export default AppNavigator;

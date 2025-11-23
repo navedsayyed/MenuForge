@@ -17,6 +17,8 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { DeleteIcon, DishIcon, EditIcon, PlusIcon, SearchIcon } from '../../../components/common/Icons';
+import ToggleSwitch from '../../../components/common/ToggleSwitch';
 import { Dish, User } from '../../../types';
 import { MainTabParamList, RootStackParamList } from '../../../types/navigation';
 import authService from '../../auth/services/authService';
@@ -144,36 +146,20 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
     );
   };
 
-  const handleToggleAvailability = async (dish: Dish) => {
+  const handleToggleAvailability = async (dish: Dish, newValue: boolean) => {
     try {
-      await dishService.toggleAvailability(dish.$id, !dish.isAvailable);
-      fetchDishes();
+      // Optimistic update
+      const updatedDishes = dishes.map(d =>
+        d.$id === dish.$id ? { ...d, isAvailable: newValue } : d
+      );
+      setDishes(updatedDishes);
+
+      await dishService.toggleAvailability(dish.$id, newValue);
     } catch (error) {
       console.error('Toggle availability error:', error);
       Alert.alert('Error', 'Failed to update availability');
+      fetchDishes(); // Revert on error
     }
-  };
-
-  const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await authService.logout();
-              navigation.replace('Login');
-            } catch (error) {
-              console.error('Logout error:', error);
-            }
-          }
-        }
-      ]
-    );
   };
 
   const renderDishCard = ({ item }: { item: Dish }) => {
@@ -191,7 +177,7 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
             />
           ) : (
             <View style={styles.placeholderImage}>
-              <Text style={styles.placeholderText}>🍽️</Text>
+              <DishIcon color="#CBD5E0" width={50} height={50} />
             </View>
           )}
 
@@ -221,23 +207,23 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
             style={[styles.actionButton, styles.editButton]}
             onPress={() => navigation.navigate('EditDish', { dish: item })}
           >
-            <Text style={styles.actionButtonText}>✏️ Edit</Text>
+            <EditIcon color="#4A5568" width={18} height={18} />
+            <Text style={styles.actionButtonText}>Edit</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.actionButton, styles.toggleButton]}
-            onPress={() => handleToggleAvailability(item)}
-          >
-            <Text style={styles.actionButtonText}>
-              {item.isAvailable ? '❌ Disable' : '✅ Enable'}
-            </Text>
-          </TouchableOpacity>
+          <View style={[styles.actionButton, styles.toggleContainer]}>
+            <ToggleSwitch
+              value={item.isAvailable}
+              onValueChange={(val) => handleToggleAvailability(item, val)}
+            />
+          </View>
 
           <TouchableOpacity
             style={[styles.actionButton, styles.deleteButton]}
             onPress={() => handleDeleteDish(item)}
           >
-            <Text style={styles.actionButtonText}>🗑️ Delete</Text>
+            <DeleteIcon color="#E53E3E" width={18} height={18} />
+            <Text style={[styles.actionButtonText, { color: '#E53E3E' }]}>Delete</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -246,7 +232,7 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
 
   const renderEmptyList = () => (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyIcon}>🍽️</Text>
+      <DishIcon color="#CBD5E0" width={80} height={80} />
       <Text style={styles.emptyTitle}>No Dishes Yet</Text>
       <Text style={styles.emptySubtitle}>
         Start adding dishes to your menu
@@ -344,7 +330,7 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                 }
               ]}
             >
-              <Text style={styles.searchIcon}>🔍</Text>
+              <SearchIcon color="#95A5A6" width={20} height={20} style={{ marginRight: 10 }} />
               <Text style={styles.searchText}>Search "Biryani"...</Text>
             </Animated.View>
           </View>
@@ -380,7 +366,7 @@ const DashboardScreen: React.FC<Props> = ({ navigation }) => {
         style={styles.fab}
         onPress={() => navigation.navigate('AddDish')}
       >
-        <Text style={styles.fabIcon}>+</Text>
+        <PlusIcon color="#FFFFFF" width={28} height={28} />
       </TouchableOpacity>
     </View>
   );
@@ -447,11 +433,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2
   },
-  searchIcon: {
-    fontSize: 18,
-    marginRight: 10,
-    color: '#95A5A6'
-  },
   searchText: {
     fontSize: 16,
     color: '#95A5A6'
@@ -462,14 +443,16 @@ const styles = StyleSheet.create({
   },
   dishCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 15,
-    marginBottom: 15,
+    borderRadius: 16,
+    marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-    overflow: 'hidden'
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)'
   },
   imageContainer: {
     position: 'relative',
@@ -483,79 +466,87 @@ const styles = StyleSheet.create({
   placeholderImage: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#EDF2F7',
     justifyContent: 'center',
     alignItems: 'center'
   },
-  placeholderText: {
-    fontSize: 60
-  },
   availabilityBadge: {
     position: 'absolute',
-    top: 10,
-    right: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20
+    top: 12,
+    right: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    overflow: 'hidden'
   },
   availableBadge: {
-    backgroundColor: '#2ECC71'
+    backgroundColor: 'rgba(46, 204, 113, 0.9)'
   },
   unavailableBadge: {
-    backgroundColor: '#E74C3C'
+    backgroundColor: 'rgba(231, 76, 60, 0.9)'
   },
   badgeText: {
     color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: 'bold'
+    fontWeight: '700',
+    letterSpacing: 0.5
   },
   dishInfo: {
-    padding: 15
+    padding: 16
   },
   dishName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2C3E50',
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2D3748',
     marginBottom: 4
   },
   dishCategory: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#FF6B6B',
     fontWeight: '600',
-    marginBottom: 8
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5
   },
   dishDescription: {
     fontSize: 14,
-    color: '#7F8C8D',
+    color: '#718096',
     lineHeight: 20,
-    marginBottom: 10
+    marginBottom: 12
   },
   dishPrice: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#2C3E50'
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#2D3748'
   },
   actions: {
     flexDirection: 'row',
     borderTopWidth: 1,
-    borderTopColor: '#E9ECEF'
+    borderTopColor: '#F7FAFC',
+    height: 50
   },
   actionButton: {
     flex: 1,
-    padding: 12,
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
     borderRightWidth: 1,
-    borderRightColor: '#E9ECEF'
+    borderRightColor: '#F7FAFC'
+  },
+  toggleContainer: {
+    backgroundColor: '#FFFFFF'
   },
   actionButtonText: {
-    fontSize: 13,
-    fontWeight: '600'
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4A5568',
+    marginLeft: 8
   },
   editButton: {
-    backgroundColor: '#F8F9FA'
+    backgroundColor: '#FFFFFF'
   },
   toggleButton: {
-    backgroundColor: '#F8F9FA'
+    backgroundColor: '#FFFFFF'
   },
   deleteButton: {
     backgroundColor: '#FFF5F5',
@@ -566,19 +557,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 60
   },
-  emptyIcon: {
-    fontSize: 80,
-    marginBottom: 20
-  },
   emptyTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2C3E50',
+    color: '#2D3748',
+    marginTop: 16,
     marginBottom: 8
   },
   emptySubtitle: {
     fontSize: 16,
-    color: '#7F8C8D',
+    color: '#718096',
     textAlign: 'center'
   },
   fab: {
@@ -592,15 +580,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#FF6B6B',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6
-  },
-  fabIcon: {
-    fontSize: 28,
-    color: '#FFFFFF',
-    fontWeight: 'bold'
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8
   }
 });
 
