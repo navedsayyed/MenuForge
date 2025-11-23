@@ -105,16 +105,18 @@ const QRScreen: React.FC<Props> = ({ navigation }) => {
           <head>
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <style>
+              @page {
+                margin: 20px;
+              }
               body { 
                 font-family: 'Helvetica', 'Arial', sans-serif; 
                 margin: 0; 
-                padding: 20px;
+                padding: 0;
                 background: white;
               }
               .page { 
                 page-break-after: always; 
                 padding: 30px 20px;
-                margin-bottom: 40px;
               }
               .page:last-child {
                 page-break-after: auto;
@@ -131,20 +133,29 @@ const QRScreen: React.FC<Props> = ({ navigation }) => {
                 color: #2C3E50; 
                 text-transform: uppercase; 
                 letter-spacing: 2px;
-                margin: 0;
+                margin: 0 0 8px 0;
               }
               .subtitle { 
                 font-size: 12px; 
                 color: #7F8C8D; 
-                margin-top: 8px;
+                margin: 0;
                 font-style: italic;
               }
               .dish-row { 
                 display: flex; 
                 align-items: center; 
-                margin-bottom: 20px; 
+                margin-bottom: 25px; 
                 border-bottom: 1px solid #E0E0E0; 
-                padding-bottom: 15px;
+                padding-bottom: 20px;
+                page-break-inside: avoid;
+              }
+              .dish-image {
+                width: 100px;
+                height: 100px;
+                border-radius: 8px;
+                object-fit: cover;
+                margin-right: 15px;
+                background-color: #F0F0F0;
               }
               .dish-details { 
                 flex: 1;
@@ -153,25 +164,31 @@ const QRScreen: React.FC<Props> = ({ navigation }) => {
                 font-size: 18px; 
                 font-weight: bold; 
                 color: #2C3E50; 
-                margin-bottom: 4px;
+                margin: 0 0 5px 0;
               }
               .dish-category { 
                 font-size: 11px; 
                 color: #FF6B6B; 
                 font-weight: bold; 
                 text-transform: uppercase; 
-                margin-bottom: 4px;
+                margin: 0 0 5px 0;
               }
               .dish-price { 
                 font-size: 16px; 
                 font-weight: bold; 
                 color: #2C3E50;
+                margin: 0;
               }
-              .qr-note {
-                font-size: 10px;
-                color: #95A5A6;
-                font-style: italic;
-                margin-top: 4px;
+              .qr-code {
+                width: 80px;
+                height: 80px;
+                margin-left: 15px;
+              }
+              .qr-label {
+                font-size: 9px;
+                color: #7F8C8D;
+                text-align: center;
+                margin-top: 5px;
               }
               .footer { 
                 text-align: center;
@@ -197,17 +214,21 @@ const QRScreen: React.FC<Props> = ({ navigation }) => {
           <div class="page">
             <div class="header">
               <h1 class="restaurant-name">${userData?.restaurantName || 'Restaurant Menu'}</h1>
-              <p class="subtitle">Complete Menu - Page ${i + 1} of ${pages.length}</p>
+              <p class="subtitle">Scan QR code to view dish photo - Page ${i + 1} of ${pages.length}</p>
             </div>
             
             <div class="dishes">
               ${pageDishes.map((dish: Dish) => `
                 <div class="dish-row">
+                  <img src="${dish.images || 'https://via.placeholder.com/100'}" class="dish-image" onerror="this.src='https://via.placeholder.com/100?text=No+Image'" />
                   <div class="dish-details">
-                    <div class="dish-name">${dish.name}</div>
-                    <div class="dish-category">${dish.category}</div>
-                    <div class="dish-price">₹${dish.price.toFixed(2)}</div>
-                    <div class="qr-note">Scan QR code in app to view photo</div>
+                    <p class="dish-name">${dish.name}</p>
+                    <p class="dish-category">${dish.category}</p>
+                    <p class="dish-price">₹${dish.price.toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(dish.images || 'https://example.com')}" class="qr-code" />
+                    <p class="qr-label">Scan Me</p>
                   </div>
                 </div>
               `).join('')}
@@ -317,7 +338,7 @@ const QRScreen: React.FC<Props> = ({ navigation }) => {
               {/* QR Code */}
               <View style={styles.qrContainer}>
                 <QRCode
-                  value={dish.images || 'https://example.com'} // Link to dish image
+                  value={dish.images || 'https://example.com'}
                   size={80}
                   color="#2C3E50"
                   backgroundColor="#FFFFFF"
