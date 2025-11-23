@@ -9,7 +9,10 @@ import { User } from '../../../types';
 
 // DEVELOPMENT MODE: Set to true to always show login screen on app reload
 // Set to false for production (sessions will persist)
-const DEV_MODE = false; // Change to false for production
+const DEV_MODE = true; // Change to false for production
+
+// Track if we've already handled the DEV_MODE logout for this session
+let hasDevModeRun = false;
 
 const authService = {
   /**
@@ -81,7 +84,7 @@ const authService = {
         APPWRITE_CONFIG.restaurantsCollectionId
       );
 
-      // Find restaurant by ID (we use userId as restaurantId)
+      // Find restaurant by ID (we use userId as restaurantId for linking)
       let restaurant = restaurants.documents.find((r: any) => r.$id === user.$id);
 
       // If not found, create restaurant record matching collection structure
@@ -124,37 +127,37 @@ const authService = {
    */
   async getCurrentUser(): Promise<User | null> {
     try {
-      // In development mode, always clear sessions to force login
-      if (DEV_MODE) {
+      // In development mode, clear sessions ONLY ONCE per app reload
+      if (DEV_MODE && !hasDevModeRun) {
+        console.log('DEV_MODE: Clearing session for fresh login...');
         try {
           await account.deleteSession('current');
         } catch (e) {
           // No session to delete
         }
         await AsyncStorage.removeItem('userData');
+        hasDevModeRun = true; // Mark as run so we don't clear it again this session
         return null;
       }
 
-      // Production mode: Check for valid session
+      // 1. Check local storage FIRST (Fastest & works offline)
+      const userDataString = await AsyncStorage.getItem('userData');
+      if (userDataString) {
+        return JSON.parse(userDataString);
+      }
+
+      // 2. If no local data, check Appwrite session
       try {
         await account.get();
-        // Session is valid, now get user data from storage
-        const userData = await AsyncStorage.getItem('userData');
-        if (userData) {
-          return JSON.parse(userData);
-        }
-        // Session exists but no local data, clear session
-        await account.deleteSession('current');
+        // We have a session but no local data. 
+        // Ideally we should fetch the restaurant data here to reconstruct userData.
+        // For now, we'll return null to force re-login to ensure data consistency.
         return null;
       } catch (error) {
-        // No active session, clear any stale local data
-        await AsyncStorage.removeItem('userData');
         return null;
       }
     } catch (error) {
       console.error('Get current user error:', error);
-      // On any error, clear local data to prevent auto-login with stale data
-      await AsyncStorage.removeItem('userData');
       return null;
     }
   },
