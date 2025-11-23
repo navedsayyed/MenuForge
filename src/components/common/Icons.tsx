@@ -76,3 +76,25 @@ export const CameraIcon = (props: SvgProps) => (
         <Circle cx={12} cy={13} r={4} />
     </Svg>
 );
+
+export const ShareIcon = (props: SvgProps) => (
+    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <Path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
+        <Path d="M16 6l-4-4-4 4" />
+        <Path d="M12 2v13" />
+    </Svg>
+);
+
+export const DownloadIcon = (props: SvgProps) => (
+    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <Path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+        <Path d="M7 10l5 5 5-5" />
+        <Path d="M12 15V3" />
+    </Svg>
+);
+
+export const CopyIcon = (props: SvgProps) => (
+    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <Path d="M8 17.929H6c-1.105 0-2-.912-2-2.036V5.036C4 3.91 4.895 3 6 3h8c1.105 0 2 .911 2 2.036v1.866m-6 .17h8c1.105 0 2 .91 2 2.035v10.857C20 21.09 19.105 22 18 22h-8c-1.105 0-2-.911-2-2.036V9.107c0-1.124.895-2.036 2-2.036z" />
+    </Svg>
+);

@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { EyeIcon } from '../../../components/icons/EyeIcon';
 import { EyeOffIcon } from '../../../components/icons/EyeOffIcon';
 import { COLORS } from '../../../constants/colors';
+import { APP_CONFIG } from '../../../constants/config';
 import { RootStackParamList } from '../../../types/navigation';
 import authService from '../../auth/services/authService';
 
@@ -154,7 +155,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.iconContainer}>
               <Text style={styles.icon}>🍽️</Text>
             </View>
-            <Text style={styles.appName}>Restrodent Admin</Text>
+            <Text style={styles.appName}>{APP_CONFIG.NAME}</Text>
           </Animated.View>
 
           {/* Login Card (The Box) */}
