@@ -40,4 +40,9 @@ app-example
 
 # generated native folders
 /ios
-/android
+
+# Android build artifacts (generated, do not commit)
+android/app/.cxx/
+android/app/build/
+android/build/
+android/.gradle/

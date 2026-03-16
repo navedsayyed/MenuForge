@@ -1,0 +1,150 @@
+name: Build Android APK
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Allow manual trigger from Actions tab
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+          cache: "gradle"
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x android/gradlew
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            android/.gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Build APK
+        run: |
+          cd android
+          ./gradlew assembleRelease --no-daemon --stacktrace --max-workers=2
+        env:
+          GRADLE_OPTS: "-Xmx2048m -XX:MaxMetaspaceSize=512m"
+
+      - name: Upload APK as Artifact (Backup)
+        uses: actions/upload-artifact@v4
+        with:
+          name: restaurant-admin-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 30
+
+      - name: Get version info
+        id: version
+        run: |
+          echo "date=$(date +'%Y.%m.%d')" >> $GITHUB_OUTPUT
+          echo "time=$(date +'%H%M')" >> $GITHUB_OUTPUT
+          echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: List built APKs
+        run: |
+          ls -lh android/app/build/outputs/apk/release/
+
+      - name: Create Public Release on App-Releases Repo
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        with:
+          repository: navedsayyed/App-Releases
+          tag_name: restaurant-admin-v${{ steps.version.outputs.date }}-${{ steps.version.outputs.time }}
+          name: Restaurant Admin v${{ steps.version.outputs.date }}
+          body: |
+            ## 🍽️ Restaurant Admin - Latest Build
+
+            **🎉 Download the APK for your device!**
+
+            ---
+
+            ### 📦 Which APK to Download?
+
+            **Most phones (recommended):**
+            👉 **app-arm64-v8a-release.apk** — Modern 64-bit phones (most common)
+
+            **Older phones:**
+            👉 **app-armeabi-v7a-release.apk** — Older 32-bit phones
+
+            **Emulators/Rare devices:**
+            - app-x86_64-release.apk — 64-bit emulators
+            - app-x86-release.apk — 32-bit emulators
+
+            💡 **Not sure?** Download **arm64-v8a** first. If it doesn't install, try **armeabi-v7a**.
+
+            ---
+
+            ### ℹ️ How to Install
+            1. Download the APK file for your device
+            2. Open it on your Android phone
+            3. Enable "Install from unknown sources" if asked
+            4. Click Install
+            5. Done! 🚀
+
+            ---
+
+            **Build Info:**
+            - 📅 Date: ${{ steps.version.outputs.date }} at ${{ steps.version.outputs.time }} UTC
+            - 🔗 Commit: ${{ steps.version.outputs.sha_short }}
+            - 🏗️ Built by: GitHub Actions
+
+            ---
+
+            *Auto-generated release*
+          files: |
+            android/app/build/outputs/apk/release/app-arm64-v8a-release.apk
+            android/app/build/outputs/apk/release/app-armeabi-v7a-release.apk
+            android/app/build/outputs/apk/release/app-x86_64-release.apk
+            android/app/build/outputs/apk/release/app-x86-release.apk
+          draft: false
+          prerelease: false
+
+      - name: Build Summary
+        if: success()
+        run: |
+          echo "## ✅ APK Built & Published!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🌐 PUBLIC Download Links:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Share these with ANYONE:**" >> $GITHUB_STEP_SUMMARY
+          echo "- 📱 Latest Release: https://github.com/navedsayyed/App-Releases/releases?q=restaurant-admin&expanded=true" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Direct Download Links (choose one):**" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔗 arm64-v8a (most phones): https://github.com/navedsayyed/App-Releases/releases/download/restaurant-admin-v${{ steps.version.outputs.date }}-${{ steps.version.outputs.time }}/app-arm64-v8a-release.apk" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔗 armeabi-v7a (older): https://github.com/navedsayyed/App-Releases/releases/download/restaurant-admin-v${{ steps.version.outputs.date }}-${{ steps.version.outputs.time }}/app-armeabi-v7a-release.apk" >> $GITHUB_STEP_SUMMARY
+          echo "- 📚 All Apps: https://github.com/navedsayyed/App-Releases/releases" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f android/app/build/outputs/apk/release/app-arm64-v8a-release.apk ]; then
+            ls -lh android/app/build/outputs/apk/release/app-*.apk | awk '{print "- " $9 ": " $5}' >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔒 Your code stays PRIVATE in Restaurant Admin repo" >> $GITHUB_STEP_SUMMARY
+          echo "🌐 APK is PUBLIC in App-Releases repo" >> $GITHUB_STEP_SUMMARY
