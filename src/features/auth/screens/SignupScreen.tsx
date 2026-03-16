@@ -1,79 +1,89 @@
 // src/screens/SignupScreen.tsx
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useState } from 'react';
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import React, { useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { RootStackParamList } from '../../../types/navigation';
-import authService from '../../auth/services/authService';
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { EyeIcon } from "../../../components/icons/EyeIcon";
+import { EyeOffIcon } from "../../../components/icons/EyeOffIcon";
+import { RootStackParamList } from "../../../types/navigation";
+import authService from "../../auth/services/authService";
 
-type SignupScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Signup'>;
+type SignupScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "Signup"
+>;
 
 interface Props {
   navigation: SignupScreenNavigationProp;
 }
 
 const SignupScreen: React.FC<Props> = ({ navigation }) => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSignup = async () => {
-    if (!name.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
+    if (
+      !name.trim() ||
+      !email.trim() ||
+      !password.trim() ||
+      !confirmPassword.trim()
+    ) {
+      Alert.alert("Error", "Please fill in all fields");
       return;
     }
 
     if (!validateEmail(email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      Alert.alert("Error", "Please enter a valid email address");
       return;
     }
 
     if (password.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters long');
+      Alert.alert("Error", "Password must be at least 8 characters long");
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      Alert.alert("Error", "Passwords do not match");
       return;
     }
 
     setLoading(true);
 
     try {
-      const user = await authService.signup(name.trim(), email.trim(), password);
-
-      Alert.alert(
-        'Success',
-        'Account created successfully!',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.replace('Main', { screen: 'DashboardTab' })
-          }
-        ]
+      const user = await authService.signup(
+        name.trim(),
+        email.trim(),
+        password,
       );
+
+      Alert.alert("Success", "Account created successfully!", [
+        {
+          text: "OK",
+          onPress: () => navigation.replace("Main", { screen: "DashboardTab" }),
+        },
+      ]);
     } catch (error: any) {
-      console.error('Signup error:', error);
+      console.error("Signup error:", error);
       Alert.alert(
-        'Signup Failed',
-        error.message || 'Failed to create account. Please try again.'
+        "Signup Failed",
+        error.message || "Failed to create account. Please try again.",
       );
     } finally {
       setLoading(false);
@@ -86,13 +96,16 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const navigateToLogin = () => {
-    navigation.navigate('Login');
+    navigation.navigate("Login");
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: "#FFFFFF" }}
+      edges={["top", "bottom"]}
+    >
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.container}
       >
         <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
@@ -102,11 +115,10 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <View style={styles.iconContainer}>
-              <Text style={styles.icon}>🍽️</Text>
-            </View>
             <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Start managing your restaurant today</Text>
+            <Text style={styles.subtitle}>
+              Start managing your restaurant today
+            </Text>
           </View>
 
           <View style={styles.form}>
@@ -152,7 +164,11 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
                   style={styles.eyeButton}
                   onPress={() => setShowPassword(!showPassword)}
                 >
-                  <Text style={styles.eyeIcon}>{showPassword ? '👁️' : '👁️‍🗨️'}</Text>
+                  {showPassword ? (
+                    <EyeIcon size={20} color="#7F8C8D" />
+                  ) : (
+                    <EyeOffIcon size={20} color="#7F8C8D" />
+                  )}
                 </TouchableOpacity>
               </View>
             </View>
@@ -173,15 +189,20 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
                   style={styles.eyeButton}
                   onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
-                  <Text style={styles.eyeIcon}>
-                    {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
-                  </Text>
+                  {showConfirmPassword ? (
+                    <EyeIcon size={20} color="#7F8C8D" />
+                  ) : (
+                    <EyeOffIcon size={20} color="#7F8C8D" />
+                  )}
                 </TouchableOpacity>
               </View>
             </View>
 
             <TouchableOpacity
-              style={[styles.signupButton, loading && styles.signupButtonDisabled]}
+              style={[
+                styles.signupButton,
+                loading && styles.signupButtonDisabled,
+              ]}
               onPress={handleSignup}
               disabled={loading}
             >
@@ -204,7 +225,7 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
               disabled={loading}
             >
               <Text style={styles.loginText}>
-                Already have an account?{' '}
+                Already have an account?{" "}
                 <Text style={styles.loginLink}>Login</Text>
               </Text>
             </TouchableOpacity>
@@ -218,128 +239,113 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF'
+    backgroundColor: "#FFFFFF",
   },
   scrollContent: {
     flexGrow: 1,
-    padding: 20
+    padding: 20,
   },
   header: {
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 30,
-    marginBottom: 30
-  },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#FFF5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20
-  },
-  icon: {
-    fontSize: 40
+    marginBottom: 30,
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 8
+    fontWeight: "bold",
+    color: "#2C3E50",
+    marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#7F8C8D',
-    textAlign: 'center'
+    color: "#7F8C8D",
+    textAlign: "center",
   },
   form: {
-    flex: 1
+    flex: 1,
   },
   inputContainer: {
-    marginBottom: 16
+    marginBottom: 16,
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#2C3E50',
-    marginBottom: 8
+    fontWeight: "600",
+    color: "#2C3E50",
+    marginBottom: 8,
   },
   input: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: "#F8F9FA",
     borderRadius: 12,
     padding: 15,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#E9ECEF'
+    borderColor: "#E9ECEF",
   },
   passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8F9FA",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E9ECEF'
+    borderColor: "#E9ECEF",
   },
   passwordInput: {
     flex: 1,
     padding: 15,
-    fontSize: 16
+    fontSize: 16,
   },
   eyeButton: {
-    padding: 15
-  },
-  eyeIcon: {
-    fontSize: 20
+    padding: 15,
   },
   signupButton: {
-    backgroundColor: '#FF6B6B',
+    backgroundColor: "#FF6B6B",
     borderRadius: 12,
     padding: 16,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 10,
-    shadowColor: '#FF6B6B',
+    shadowColor: "#FF6B6B",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 5
+    elevation: 5,
   },
   signupButtonDisabled: {
-    backgroundColor: '#FFB8B8'
+    backgroundColor: "#FFB8B8",
   },
   signupButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 18,
-    fontWeight: 'bold'
+    fontWeight: "bold",
   },
   divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 25
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 25,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#E9ECEF'
+    backgroundColor: "#E9ECEF",
   },
   dividerText: {
     marginHorizontal: 15,
-    color: '#7F8C8D',
+    color: "#7F8C8D",
     fontSize: 14,
-    fontWeight: '600'
+    fontWeight: "600",
   },
   loginContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 10,
-    marginBottom: 20
+    marginBottom: 20,
   },
   loginText: {
     fontSize: 16,
-    color: '#7F8C8D'
+    color: "#7F8C8D",
   },
   loginLink: {
-    color: '#FF6B6B',
-    fontWeight: 'bold'
-  }
+    color: "#FF6B6B",
+    fontWeight: "bold",
+  },
 });
 
 export default SignupScreen;

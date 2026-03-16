@@ -1,17 +1,22 @@
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useEffect } from 'react';
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import React, { useEffect } from "react";
 import {
   ActivityIndicator,
+  Image,
   StatusBar,
   StyleSheet,
   Text,
-  View
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import authService from '../features/auth/services/authService';
-import { RootStackParamList } from '../types/navigation';
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import LogoPng from "../../logo/restaurant-admin.png";
+import authService from "../features/auth/services/authService";
+import { RootStackParamList } from "../types/navigation";
 
-type SplashScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Splash'>;
+type SplashScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "Splash"
+>;
 
 interface Props {
   navigation: SplashScreenNavigationProp;
@@ -24,29 +29,27 @@ const SplashScreen: React.FC<Props> = ({ navigation }) => {
 
   const checkLoginStatus = async () => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise<void>((resolve) => setTimeout(() => resolve(), 2000));
       const user = await authService.getCurrentUser();
 
       if (user) {
-        navigation.replace('Main', { screen: 'DashboardTab' });
+        navigation.replace("Main", { screen: "DashboardTab" });
       } else {
-        navigation.replace('Login');
+        navigation.replace("Login");
       }
     } catch (error) {
-      console.error('Splash screen error:', error);
-      navigation.replace('Login');
+      console.error("Splash screen error:", error);
+      navigation.replace("Login");
     }
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <StatusBar barStyle="light-content" backgroundColor="#FF6B6B" />
 
       <View style={styles.contentContainer}>
         <View style={styles.logoContainer}>
-          <View style={styles.iconCircle}>
-            <Text style={styles.iconText}>🍽️</Text>
-          </View>
+          <Image source={LogoPng} style={styles.logoFallback} />
           <Text style={styles.appName}>Restaurant Admin</Text>
           <Text style={styles.tagline}>Manage your dishes with ease</Text>
         </View>
@@ -67,62 +70,53 @@ const SplashScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FF6B6B',
+    backgroundColor: "#FF6B6B",
   },
   contentContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
   },
   logoContainer: {
-    alignItems: 'center',
-    marginBottom: 60
+    alignItems: "center",
+    marginBottom: 60,
   },
-  iconCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-    borderWidth: 3,
-    borderColor: 'rgba(255, 255, 255, 0.5)'
-  },
-  iconText: {
-    fontSize: 60
+  logoFallback: {
+    width: 150,
+    height: 150,
+    resizeMode: "contain",
   },
   appName: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontWeight: "bold",
+    color: "#FFFFFF",
     marginBottom: 10,
-    textAlign: 'center'
+    textAlign: "center",
   },
   tagline: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'center'
+    color: "rgba(255, 255, 255, 0.8)",
+    textAlign: "center",
   },
   loaderContainer: {
-    alignItems: 'center',
-    marginTop: 40
+    alignItems: "center",
+    marginTop: 40,
   },
   loadingText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
     marginTop: 15,
-    fontWeight: '500'
+    fontWeight: "500",
   },
   footer: {
-    alignItems: 'center',
-    paddingBottom: 10
+    alignItems: "center",
+    paddingBottom: 10,
   },
   footerText: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 14
-  }
+    color: "rgba(255, 255, 255, 0.7)",
+    fontSize: 14,
+  },
 });
 
 export default SplashScreen;

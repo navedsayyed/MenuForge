@@ -1,30 +1,42 @@
 // src/screens/EditDishScreen.tsx
-import { RouteProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useState } from 'react';
+import { RouteProp } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import React, { useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
-} from 'react-native';
-import { Asset, launchCamera, launchImageLibrary } from 'react-native-image-picker';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BackIcon, CameraIcon, DeleteIcon, GalleryIcon } from '../../../components/common/Icons';
-import { Category } from '../../../types';
-import { RootStackParamList } from '../../../types/navigation';
-import authService from '../../auth/services/authService';
-import dishService from '../services/dishService';
-import { getImageUrl } from '../services/uploadService';
+    ActivityIndicator,
+    Alert,
+    Image,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import {
+    Asset,
+    launchCamera,
+    launchImageLibrary,
+} from "react-native-image-picker";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+    BackIcon,
+    CameraIcon,
+    DeleteIcon,
+    GalleryIcon,
+} from "../../../components/common/Icons";
+import { Category } from "../../../types";
+import { RootStackParamList } from "../../../types/navigation";
+import authService from "../../auth/services/authService";
+import dishService from "../services/dishService";
+import { getImageUrl } from "../services/uploadService";
 
-type EditDishScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'EditDish'>;
-type EditDishScreenRouteProp = RouteProp<RootStackParamList, 'EditDish'>;
+type EditDishScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "EditDish"
+>;
+type EditDishScreenRouteProp = RouteProp<RootStackParamList, "EditDish">;
 
 interface Props {
   navigation: EditDishScreenNavigationProp;
@@ -38,18 +50,26 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
   const [description, setDescription] = useState(dish.description);
   const [price, setPrice] = useState(dish.price.toString());
   const [category, setCategory] = useState<Category>(dish.category as Category);
-  const [existingImages, setExistingImages] = useState<string[]>(dish.images ? [dish.images] : []);
+  const [existingImages, setExistingImages] = useState<string[]>(
+    dish.images ? [dish.images] : [],
+  );
   const [newImages, setNewImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const categories: Category[] = ['Appetizer', 'Main Course', 'Dessert', 'Beverage', 'Other'];
+  const categories: Category[] = [
+    "Appetizer",
+    "Main Course",
+    "Dessert",
+    "Beverage",
+    "Other",
+  ];
 
   const pickImages = async () => {
     const totalImages = existingImages.length + newImages.length;
 
     try {
       const result = await launchImageLibrary({
-        mediaType: 'photo',
+        mediaType: "photo",
         selectionLimit: 5 - totalImages,
         quality: 0.8,
       });
@@ -60,15 +80,15 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
           .filter((uri): uri is string => uri !== undefined);
 
         if (totalImages + newImageUris.length > 5) {
-          Alert.alert('Limit Exceeded', 'You can only have up to 5 images');
+          Alert.alert("Limit Exceeded", "You can only have up to 5 images");
           return;
         }
 
         setNewImages([...newImages, ...newImageUris]);
       }
     } catch (error) {
-      console.error('Image picker error:', error);
-      Alert.alert('Error', 'Failed to pick images');
+      console.error("Image picker error:", error);
+      Alert.alert("Error", "Failed to pick images");
     }
   };
 
@@ -77,14 +97,14 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
 
     try {
       const result = await launchCamera({
-        mediaType: 'photo',
+        mediaType: "photo",
         quality: 0.8,
         saveToPhotos: true,
       });
 
       if (result.assets && result.assets.length > 0) {
         if (totalImages >= 5) {
-          Alert.alert('Limit Exceeded', 'You can only have up to 5 images');
+          Alert.alert("Limit Exceeded", "You can only have up to 5 images");
           return;
         }
 
@@ -94,8 +114,8 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
         }
       }
     } catch (error) {
-      console.error('Camera error:', error);
-      Alert.alert('Error', 'Failed to take photo');
+      console.error("Camera error:", error);
+      Alert.alert("Error", "Failed to take photo");
     }
   };
 
@@ -111,27 +131,27 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const validateForm = (): boolean => {
     if (!name.trim()) {
-      Alert.alert('Validation Error', 'Please enter dish name');
+      Alert.alert("Validation Error", "Please enter dish name");
       return false;
     }
 
     if (!description.trim()) {
-      Alert.alert('Validation Error', 'Please enter description');
+      Alert.alert("Validation Error", "Please enter description");
       return false;
     }
 
     if (!price.trim() || isNaN(parseFloat(price)) || parseFloat(price) <= 0) {
-      Alert.alert('Validation Error', 'Please enter a valid price');
+      Alert.alert("Validation Error", "Please enter a valid price");
       return false;
     }
 
     if (!category) {
-      Alert.alert('Validation Error', 'Please select a category');
+      Alert.alert("Validation Error", "Please select a category");
       return false;
     }
 
     if (existingImages.length + newImages.length === 0) {
-      Alert.alert('Validation Error', 'Please add at least one image');
+      Alert.alert("Validation Error", "Please add at least one image");
       return false;
     }
 
@@ -147,8 +167,8 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
       const user = await authService.getCurrentUser();
 
       if (!user) {
-        Alert.alert('Error', 'User not authenticated');
-        navigation.replace('Login');
+        Alert.alert("Error", "User not authenticated");
+        navigation.replace("Login");
         return;
       }
 
@@ -157,7 +177,7 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
         description: description.trim(),
         price: parseFloat(price),
         category: category as Category,
-        isAvailable: dish.isAvailable
+        isAvailable: dish.isAvailable,
       };
 
       await dishService.updateDish(
@@ -165,79 +185,71 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
         dish.$id,
         dishData,
         newImages,
-        existingImages
+        existingImages,
       );
 
-      Alert.alert(
-        'Success',
-        'Dish updated successfully!',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack()
-          }
-        ]
-      );
+      Alert.alert("Success", "Dish updated successfully!", [
+        {
+          text: "OK",
+          onPress: () => navigation.goBack(),
+        },
+      ]);
     } catch (error: any) {
-      console.error('Update dish error:', error);
-      Alert.alert('Error', error.message || 'Failed to update dish');
+      console.error("Update dish error:", error);
+      Alert.alert("Error", error.message || "Failed to update dish");
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteDish = async () => {
-    Alert.alert(
-      'Delete Dish',
-      'Are you sure you want to delete this dish?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel'
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            setLoading(true);
-            try {
-              const user = await authService.getCurrentUser();
+    Alert.alert("Delete Dish", "Are you sure you want to delete this dish?", [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          setLoading(true);
+          try {
+            const user = await authService.getCurrentUser();
 
-              if (!user) {
-                Alert.alert('Error', 'User not authenticated');
-                navigation.replace('Login');
-                return;
-              }
-
-              await dishService.deleteDish(user.restaurantId, dish.$id);
-
-              Alert.alert(
-                'Success',
-                'Dish deleted successfully!',
-                [
-                  {
-                    text: 'OK',
-                    onPress: () => navigation.goBack()
-                  }
-                ]
-              );
-            } catch (error: any) {
-              console.error('Delete dish error:', error);
-              Alert.alert('Error', error.message || 'Failed to delete dish');
-            } finally {
-              setLoading(false);
+            if (!user) {
+              Alert.alert("Error", "User not authenticated");
+              navigation.replace("Login");
+              return;
             }
+
+            await dishService.deleteDish(user.restaurantId, dish.$id);
+
+            Alert.alert("Success", "Dish deleted successfully!", [
+              {
+                text: "OK",
+                onPress: () => navigation.goBack(),
+              },
+            ]);
+          } catch (error: any) {
+            console.error("Delete dish error:", error);
+            Alert.alert("Error", error.message || "Failed to delete dish");
+          } finally {
+            setLoading(false);
           }
-        }
-      ]
-    );
+        },
+      },
+    ]);
   };
 
   const insets = useSafeAreaInsets();
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="transparent"
+        translucent
+      />
 
       <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
         <TouchableOpacity
@@ -306,7 +318,7 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
                 key={cat}
                 style={[
                   styles.categoryButton,
-                  category === cat && styles.categoryButtonActive
+                  category === cat && styles.categoryButtonActive,
                 ]}
                 onPress={() => setCategory(cat)}
                 disabled={loading}
@@ -314,7 +326,7 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
                 <Text
                   style={[
                     styles.categoryButtonText,
-                    category === cat && styles.categoryButtonTextActive
+                    category === cat && styles.categoryButtonTextActive,
                   ]}
                 >
                   {cat}
@@ -334,7 +346,11 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
                 {existingImages.map((imagePath, index) => (
                   <View key={`existing-${index}`} style={styles.imageItem}>
                     <Image
-                      source={getImageUrl(imagePath) ? { uri: getImageUrl(imagePath)! } : require('../../../assets/placeholder.png')}
+                      source={
+                        getImageUrl(imagePath)
+                          ? { uri: getImageUrl(imagePath)! }
+                          : require("../../../assets/placeholder.jpg")
+                      }
                       style={styles.imagePreview}
                     />
                     <TouchableOpacity
@@ -372,18 +388,32 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
             <TouchableOpacity
               style={styles.imageButton}
               onPress={pickImages}
-              disabled={loading || (existingImages.length + newImages.length >= 5)}
+              disabled={
+                loading || existingImages.length + newImages.length >= 5
+              }
             >
-              <GalleryIcon color="#2C3E50" width={24} height={24} style={{ marginBottom: 5 }} />
+              <GalleryIcon
+                color="#2C3E50"
+                width={24}
+                height={24}
+                style={{ marginBottom: 5 }}
+              />
               <Text style={styles.imageButtonText}>Gallery</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.imageButton}
               onPress={takePhoto}
-              disabled={loading || (existingImages.length + newImages.length >= 5)}
+              disabled={
+                loading || existingImages.length + newImages.length >= 5
+              }
             >
-              <CameraIcon color="#2C3E50" width={24} height={24} style={{ marginBottom: 5 }} />
+              <CameraIcon
+                color="#2C3E50"
+                width={24}
+                height={24}
+                style={{ marginBottom: 5 }}
+              />
               <Text style={styles.imageButtonText}>Camera</Text>
             </TouchableOpacity>
           </View>
@@ -414,181 +444,181 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA'
+    backgroundColor: "#F8F9FA",
   },
   header: {
-    backgroundColor: '#FF6B6B',
+    backgroundColor: "#FF6B6B",
     padding: 20,
     paddingTop: 40,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center'
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   backButton: {
     width: 40,
     height: 40,
-    justifyContent: 'center',
-    alignItems: 'center'
+    justifyContent: "center",
+    alignItems: "center",
   },
   backButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 28,
-    fontWeight: 'bold'
+    fontWeight: "bold",
   },
   deleteButton: {
     width: 40,
     height: 40,
-    justifyContent: 'center',
-    alignItems: 'center'
+    justifyContent: "center",
+    alignItems: "center",
   },
   deleteButtonText: {
-    fontSize: 24
+    fontSize: 24,
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF'
+    fontWeight: "bold",
+    color: "#FFFFFF",
   },
   content: {
     flex: 1,
-    padding: 20
+    padding: 20,
   },
   inputContainer: {
-    marginBottom: 20
+    marginBottom: 20,
   },
   label: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#2C3E50',
-    marginBottom: 8
+    fontWeight: "600",
+    color: "#2C3E50",
+    marginBottom: 8,
   },
   subLabel: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#7F8C8D',
+    fontWeight: "600",
+    color: "#7F8C8D",
     marginBottom: 8,
-    marginTop: 10
+    marginTop: 10,
   },
   input: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 15,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#E9ECEF'
+    borderColor: "#E9ECEF",
   },
   textArea: {
     height: 100,
-    paddingTop: 15
+    paddingTop: 15,
   },
   categoryContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
   },
   categoryButton: {
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#E9ECEF'
+    borderColor: "#E9ECEF",
   },
   categoryButtonActive: {
-    backgroundColor: '#FF6B6B',
-    borderColor: '#FF6B6B'
+    backgroundColor: "#FF6B6B",
+    borderColor: "#FF6B6B",
   },
   categoryButtonText: {
     fontSize: 14,
-    color: '#7F8C8D',
-    fontWeight: '600'
+    color: "#7F8C8D",
+    fontWeight: "600",
   },
   categoryButtonTextActive: {
-    color: '#FFFFFF'
+    color: "#FFFFFF",
   },
   imageGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
-    marginBottom: 15
+    marginBottom: 15,
   },
   imageItem: {
-    position: 'relative',
+    position: "relative",
     width: 100,
-    height: 100
+    height: 100,
   },
   imagePreview: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 12
+    width: "100%",
+    height: "100%",
+    borderRadius: 12,
   },
   removeImageButton: {
-    position: 'absolute',
+    position: "absolute",
     top: -5,
     right: -5,
     width: 25,
     height: 25,
     borderRadius: 12.5,
-    backgroundColor: '#E74C3C',
-    justifyContent: 'center',
-    alignItems: 'center'
+    backgroundColor: "#E74C3C",
+    justifyContent: "center",
+    alignItems: "center",
   },
   removeImageText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 14,
-    fontWeight: 'bold'
+    fontWeight: "bold",
   },
   imageButtonsContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
-    marginBottom: 10
+    marginBottom: 10,
   },
   imageButton: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 15,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#E9ECEF'
+    borderColor: "#E9ECEF",
   },
   imageButtonIcon: {
     fontSize: 30,
-    marginBottom: 5
+    marginBottom: 5,
   },
   imageButtonText: {
     fontSize: 14,
-    color: '#2C3E50',
-    fontWeight: '600'
+    color: "#2C3E50",
+    fontWeight: "600",
   },
   imageHint: {
     fontSize: 12,
-    color: '#7F8C8D',
-    textAlign: 'center'
+    color: "#7F8C8D",
+    textAlign: "center",
   },
   submitButton: {
-    backgroundColor: '#FF6B6B',
+    backgroundColor: "#FF6B6B",
     borderRadius: 12,
     padding: 16,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 10,
-    shadowColor: '#FF6B6B',
+    shadowColor: "#FF6B6B",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 5
+    elevation: 5,
   },
   submitButtonDisabled: {
-    backgroundColor: '#FFB8B8'
+    backgroundColor: "#FFB8B8",
   },
   submitButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 18,
-    fontWeight: 'bold'
+    fontWeight: "bold",
   },
   bottomPadding: {
-    height: 30
-  }
+    height: 30,
+  },
 });
 
 export default EditDishScreen;
