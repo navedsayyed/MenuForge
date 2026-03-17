@@ -27,7 +27,7 @@ const dishService = {
         description: dishData.description,
         price: parseFloat(dishData.price.toString()),
         category: dishData.category,
-        images: imageUrls[0] || '', // Use first image URL only
+        images: imageUrls.join(','),
         isAvailable: dishData.isAvailable !== undefined ? dishData.isAvailable : true // Default to available
       };
 
@@ -120,7 +120,7 @@ const dishService = {
           description: dishData.description,
           price: parseFloat(dishData.price.toString()),
           category: dishData.category,
-          images: allImageUrls[0] || '', // Use first image URL only
+          images: allImageUrls.join(','),
           isAvailable: dishData.isAvailable !== undefined ? dishData.isAvailable : true // Preserve availability
         }
       );

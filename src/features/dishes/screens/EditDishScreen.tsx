@@ -3,34 +3,33 @@ import { RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import {
-    Asset,
-    launchCamera,
-    launchImageLibrary,
+  Asset,
+  launchCamera,
+  launchImageLibrary,
 } from "react-native-image-picker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
-    BackIcon,
-    CameraIcon,
-    DeleteIcon,
-    GalleryIcon,
+  BackIcon,
+  CameraIcon,
+  DeleteIcon,
+  GalleryIcon,
 } from "../../../components/common/Icons";
 import { Category } from "../../../types";
 import { RootStackParamList } from "../../../types/navigation";
 import authService from "../../auth/services/authService";
 import dishService from "../services/dishService";
-import { getImageUrl } from "../services/uploadService";
 
 type EditDishScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -51,7 +50,7 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
   const [price, setPrice] = useState(dish.price.toString());
   const [category, setCategory] = useState<Category>(dish.category as Category);
   const [existingImages, setExistingImages] = useState<string[]>(
-    dish.images ? [dish.images] : [],
+    dish.images ? dish.images.split(',').filter(Boolean) : [],
   );
   const [newImages, setNewImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -346,11 +345,7 @@ const EditDishScreen: React.FC<Props> = ({ navigation, route }) => {
                 {existingImages.map((imagePath, index) => (
                   <View key={`existing-${index}`} style={styles.imageItem}>
                     <Image
-                      source={
-                        getImageUrl(imagePath)
-                          ? { uri: getImageUrl(imagePath)! }
-                          : require("../../../assets/placeholder.jpg")
-                      }
+                      source={{ uri: imagePath }}
                       style={styles.imagePreview}
                     />
                     <TouchableOpacity
