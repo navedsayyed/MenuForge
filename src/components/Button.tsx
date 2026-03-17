@@ -76,7 +76,7 @@ const Button: React.FC<ButtonProps> = ({
       activeOpacity={0.7}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'outline' ? '#FF6B6B' : '#FFFFFF'} />
+        <ActivityIndicator color={variant === 'outline' ? '#E8480A' : '#FFFFFF'} />
       ) : (
         <View style={styles.content}>
           {icon && <View style={styles.iconContainer}>{icon}</View>}
@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     elevation: 3
   },
   primaryButton: {
-    backgroundColor: '#FF6B6B'
+    backgroundColor: '#E8480A'
   },
   secondaryButton: {
     backgroundColor: '#3498DB'
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   outlineButton: {
     backgroundColor: 'transparent',
     borderWidth: 2,
-    borderColor: '#FF6B6B'
+    borderColor: '#E8480A'
   },
   dangerButton: {
     backgroundColor: '#E74C3C'
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF'
   },
   outlineText: {
-    color: '#FF6B6B'
+    color: '#E8480A'
   },
   dangerText: {
     color: '#FFFFFF'

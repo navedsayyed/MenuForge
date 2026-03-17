@@ -1,36 +1,38 @@
-import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { CompositeNavigationProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useEffect, useState } from 'react';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import { CompositeNavigationProp } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { APPWRITE_CONFIG, databases } from '../../../api/client/appwrite';
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Linking,
+    Platform,
+    RefreshControl,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { APPWRITE_CONFIG, databases } from "../../../api/client/appwrite";
+import Button from "../../../components/Button";
+import Input from "../../../components/Input";
+import { APP_CONFIG } from "../../../constants/config";
+import { useTheme } from "../../../providers/AuthProvider";
+import { User } from "../../../types";
 import {
-  ChevronRightIcon,
-  DishIcon,
-  EditIcon,
-  LogoutIcon,
-  StarIcon,
-  UserIcon
-} from '../../../components/common/Icons';
-import { APP_CONFIG } from '../../../constants/config';
-import { useTheme } from '../../../providers/AuthProvider';
-import { User } from '../../../types';
-import { MainTabParamList, RootStackParamList } from '../../../types/navigation';
-import authService from '../../auth/services/authService';
+    MainTabParamList,
+    RootStackParamList,
+} from "../../../types/navigation";
+import authService from "../../auth/services/authService";
 
 type ProfileScreenNavigationProp = CompositeNavigationProp<
-  BottomTabNavigationProp<MainTabParamList, 'ProfileTab'>,
+  BottomTabNavigationProp<MainTabParamList, "ProfileTab">,
   NativeStackNavigationProp<RootStackParamList>
 >;
 
@@ -47,524 +49,736 @@ interface RestaurantInfo {
   description: string;
 }
 
+const EMPTY_RESTAURANT_INFO: RestaurantInfo = {
+  name: "",
+  address: "",
+  phone: "",
+  timing: "",
+  location: "",
+  description: "",
+};
+
+const LOCAL_USER_KEY = "userData";
+
+const toTitleCase = (value?: string) => {
+  if (!value) {
+    return "";
+  }
+
+  return value
+    .trim()
+    .split(/\s+/)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+};
+
+const getAvatarLabel = (name?: string) => {
+  const normalizedName = toTitleCase(name);
+  if (!normalizedName) {
+    return "R";
+  }
+
+  const parts = normalizedName.split(" ").filter(Boolean);
+  if (parts.length === 1) {
+    return parts[0].charAt(0).toUpperCase();
+  }
+
+  return `${parts[0].charAt(0)}${parts[1].charAt(0)}`.toUpperCase();
+};
+
 const ProfileScreen: React.FC<Props> = ({ navigation }) => {
-  const { themeMode, setThemeMode, isDark } = useTheme();
-  const [userData, setUserData] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [restaurantInfo, setRestaurantInfo] = useState<RestaurantInfo>({
-    name: '',
-    address: '',
-    phone: '',
-    timing: '',
-    location: '',
-    description: ''
-  });
+  const { setThemeMode, isDark } = useTheme();
   const insets = useSafeAreaInsets();
+  const HEADER_HEIGHT = (insets.top > 0 ? insets.top : 20) + 96;
+
+  const [userData, setUserData] = useState<User | null>(null);
+  const [restaurantInfo, setRestaurantInfo] = useState<RestaurantInfo>(
+    EMPTY_RESTAURANT_INFO,
+  );
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [sendingReset, setSendingReset] = useState(false);
+  const ownerName = toTitleCase(userData?.name) || "Owner";
+  const restaurantName =
+    toTitleCase(restaurantInfo.name || userData?.restaurantName) ||
+    "Restaurant";
+  const avatarLabel = getAvatarLabel(userData?.name || restaurantName);
+  const headerSubtitle =
+    ownerName.toLowerCase() === restaurantName.toLowerCase()
+      ? "Restaurant Profile"
+      : restaurantName;
 
   useEffect(() => {
-    loadUserData();
+    void loadUserData();
   }, []);
 
-  const loadUserData = async () => {
+  const completionCount = useMemo(
+    () =>
+      Object.values(restaurantInfo).filter((value) => value.trim().length > 0)
+        .length,
+    [restaurantInfo],
+  );
+
+  const normalizeRestaurantInfo = (
+    response: Record<string, any>,
+    user: User,
+  ): RestaurantInfo => ({
+    name: String(response.name || user.restaurantName || ""),
+    address: String(response.address || ""),
+    phone: String(response.phone || response.phoneNumber || ""),
+    timing: String(response.timing || response.operatingHours || ""),
+    location: String(response.location || ""),
+    description: String(response.description || ""),
+  });
+
+  const loadUserData = async (showLoader = true) => {
     try {
-      setLoading(true);
-      const user = await authService.getCurrentUser();
-      if (user) {
-        setUserData(user);
-        await loadRestaurantInfo(user.restaurantId);
-      } else {
-        navigation.replace('Login');
+      if (showLoader) {
+        setLoading(true);
       }
+
+      const user = await authService.getCurrentUser();
+      if (!user) {
+        navigation.replace("Login");
+        return;
+      }
+
+      setUserData(user);
+      await loadRestaurantInfo(user);
     } catch (error) {
-      console.error('Load user error:', error);
-      navigation.replace('Login');
+      console.error("Load profile error:", error);
+      navigation.replace("Login");
     } finally {
-      setLoading(false);
+      if (showLoader) {
+        setLoading(false);
+      }
     }
   };
 
-  const loadRestaurantInfo = async (restaurantId: string) => {
+  const loadRestaurantInfo = async (user: User) => {
     try {
       const response = await databases.getDocument(
         APPWRITE_CONFIG.databaseId,
         APPWRITE_CONFIG.restaurantsCollectionId,
-        restaurantId
+        user.restaurantId,
       );
 
-      setRestaurantInfo({
-        name: response.name || '',
-        address: response.address || '',
-        phone: response.phone || '',
-        timing: response.timing || '',
-        location: response.location || '',
-        description: response.description || ''
-      });
+      setRestaurantInfo(
+        normalizeRestaurantInfo(response as Record<string, any>, user),
+      );
     } catch (error) {
-      console.error('Load restaurant info error:', error);
+      console.error("Load restaurant info error:", error);
+      setRestaurantInfo({
+        ...EMPTY_RESTAURANT_INFO,
+        name: user.restaurantName || "",
+      });
+    }
+  };
+
+  const handleRefresh = async () => {
+    try {
+      setRefreshing(true);
+      await loadUserData(false);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const updateField = (field: keyof RestaurantInfo, value: string) => {
+    setRestaurantInfo((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
+  const handleSaveProfile = async () => {
+    if (!userData) {
+      return;
+    }
+
+    const trimmedName = restaurantInfo.name.trim();
+    if (!trimmedName) {
+      Alert.alert("Validation Error", "Restaurant name is required.");
+      return;
+    }
+
+    const payload = {
+      name: trimmedName,
+      address: restaurantInfo.address.trim(),
+      phoneNumber: restaurantInfo.phone.trim(),
+      operatingHours: restaurantInfo.timing.trim(),
+      location: restaurantInfo.location.trim(),
+      description: restaurantInfo.description.trim(),
+    };
+
+    try {
+      setSaving(true);
+
+      await databases.updateDocument(
+        APPWRITE_CONFIG.databaseId,
+        APPWRITE_CONFIG.restaurantsCollectionId,
+        userData.restaurantId,
+        payload,
+      );
+
+      const updatedUserData: User = {
+        ...userData,
+        restaurantName: trimmedName,
+      };
+
+      await AsyncStorage.setItem(
+        LOCAL_USER_KEY,
+        JSON.stringify(updatedUserData),
+      );
+      setUserData(updatedUserData);
+      setRestaurantInfo((current) => ({
+        ...current,
+        name: trimmedName,
+      }));
+
+      Alert.alert("Saved", "Restaurant settings updated successfully.");
+    } catch (error: any) {
+      console.error("Save profile error:", error);
+      Alert.alert(
+        "Save Failed",
+        error?.message || "Unable to update restaurant settings right now.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    if (!userData?.email) {
+      Alert.alert("Missing Email", "No account email was found for this user.");
+      return;
+    }
+
+    try {
+      setSendingReset(true);
+      await authService.sendPasswordResetEmail(userData.email);
+      Alert.alert(
+        "Reset Email Sent",
+        `We sent a password reset email to ${userData.email}.`,
+      );
+    } catch (error: any) {
+      console.error("Password reset error:", error);
+      Alert.alert(
+        "Reset Failed",
+        error?.message || "Unable to send the reset email right now.",
+      );
+    } finally {
+      setSendingReset(false);
+    }
+  };
+
+  const handleOpenWebsite = async () => {
+    try {
+      await Linking.openURL(APP_CONFIG.WEB_URL);
+    } catch (error) {
+      Alert.alert("Unavailable", "Could not open the website on this device.");
     }
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await authService.logout();
-              navigation.replace('Login');
-            } catch (error) {
-              console.error('Logout error:', error);
-              Alert.alert('Error', 'Failed to logout');
-            }
+    Alert.alert("Logout", "Are you sure you want to logout?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await authService.logout();
+            navigation.replace("Login");
+          } catch (error) {
+            console.error("Logout error:", error);
+            Alert.alert("Error", "Failed to logout.");
           }
-        }
-      ]
-    );
+        },
+      },
+    ]);
   };
-
-  const renderMenuItem = (
-    icon: React.ReactNode,
-    title: string,
-    subtitle?: string,
-    rightElement?: React.ReactNode,
-    onPress?: () => void,
-    isLast?: boolean
-  ) => (
-    <TouchableOpacity
-      style={[styles.menuItem, isLast && styles.menuItemLast]}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <View style={styles.menuIconContainer}>
-        {icon}
-      </View>
-      <View style={styles.menuContent}>
-        <View style={styles.menuTextContainer}>
-          <Text style={styles.menuTitle}>{title}</Text>
-          {subtitle && <Text style={styles.menuSubtitle}>{subtitle}</Text>}
-        </View>
-        {rightElement || <ChevronRightIcon color="#CBD5E0" width={20} height={20} />}
-      </View>
-    </TouchableOpacity>
-  );
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF6B6B" />
+        <ActivityIndicator size="large" color="#E8480A" />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="transparent"
+        translucent
+      />
 
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+      <View style={[styles.header, { height: HEADER_HEIGHT }]}>
         <View style={styles.headerContent}>
-          <View style={styles.userInfo}>
-            <Text style={styles.userName}>{userData?.name || 'Owner'}</Text>
-            <Text style={styles.restaurantName}>{restaurantInfo.name || 'Restaurant Name'}</Text>
-          </View>
-          <View style={styles.avatarContainer}>
-            <Text style={styles.avatarText}>
-              {userData?.name?.charAt(0).toUpperCase() || 'O'}
-            </Text>
+          <View style={styles.headerTopRow}>
+            <View style={styles.headerTextWrap}>
+              <Text style={styles.headerEyebrow}>Profile Settings</Text>
+              <Text style={styles.headerTitle}>{ownerName}</Text>
+              <Text style={styles.headerSubtitle}>{headerSubtitle}</Text>
+            </View>
+
+            <View style={styles.avatarContainer}>
+              <Text style={styles.avatarText}>{avatarLabel}</Text>
+            </View>
           </View>
         </View>
       </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={{ paddingBottom: 100 }}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        {/* Subscription Banner */}
-        <TouchableOpacity style={styles.premiumBanner} activeOpacity={0.9}>
-          <View style={styles.premiumContent}>
-            <View style={styles.premiumIconContainer}>
-              <Text style={{ fontSize: 16 }}>👑</Text>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: HEADER_HEIGHT + 20 },
+          ]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          }
+        >
+          <View style={styles.summaryCardWrap}>
+            <View style={styles.summaryCard}>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryPrimaryValue}>
+                  {completionCount}/6
+                </Text>
+                <Text style={styles.summaryLabel}>Profile Complete</Text>
+              </View>
+              <View style={styles.summaryDivider} />
+              <View style={styles.summaryItem}>
+                <Text style={styles.summarySecondaryValue} numberOfLines={1}>
+                  {formatCompactText(userData?.email)}
+                </Text>
+                <Text style={styles.summaryLabel}>Account Email</Text>
+              </View>
             </View>
-            <View>
-              <Text style={styles.premiumText}>Premium Plan</Text>
-              <Text style={styles.premiumSubtext}>Active until Dec 2025</Text>
+          </View>
+
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Business Profile</Text>
+              <Text style={styles.sectionSubtitle}>
+                Keep restaurant details accurate for your admin account.
+              </Text>
             </View>
-          </View>
-          <ChevronRightIcon color="#FFFFFF" width={20} height={20} />
-        </TouchableOpacity>
 
-        {/* Quick Stats Row */}
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{restaurantInfo.name ? '✓' : '✗'}</Text>
-            <Text style={styles.statLabel}>Profile</Text>
-          </View>
-
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>0</Text>
-            <Text style={styles.statLabel}>Total Orders</Text>
-          </View>
-
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>4.8★</Text>
-            <Text style={styles.statLabel}>Rating</Text>
-          </View>
-        </View>
-
-        {/* Restaurant Management */}
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionIndicator} />
-          <Text style={styles.sectionTitle}>Restaurant Management</Text>
-        </View>
-
-        <View style={styles.menuSection}>
-          {renderMenuItem(
-            <EditIcon color="#4A5568" width={22} height={22} />,
-            "Restaurant Settings",
-            "Edit name, address, hours",
-            undefined,
-            () => Alert.alert('Info', 'Restaurant settings coming soon!')
-          )}
-
-          {renderMenuItem(
-            <DishIcon color="#4A5568" width={22} height={22} />,
-            "Menu Management",
-            "Manage dishes & categories",
-            undefined,
-            () => navigation.navigate('DashboardTab')
-          )}
-
-          {renderMenuItem(
-            <Text style={{ fontSize: 20 }}>📊</Text>,
-            "Analytics & Reports",
-            "View sales & performance",
-            undefined,
-            () => Alert.alert('Info', 'Analytics coming soon!')
-          )}
-
-          {renderMenuItem(
-            <Text style={{ fontSize: 20 }}>👥</Text>,
-            "Staff Management",
-            "Manage team access",
-            undefined,
-            () => Alert.alert('Info', 'Staff management coming soon!'),
-            true
-          )}
-        </View>
-
-        {/* Business Tools */}
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionIndicator} />
-          <Text style={styles.sectionTitle}>Business Tools</Text>
-        </View>
-
-        <View style={styles.menuSection}>
-          {renderMenuItem(
-            <Text style={{ fontSize: 20 }}>🎟️</Text>,
-            "QR Code Generator",
-            "Generate menu QR codes",
-            undefined,
-            () => navigation.navigate('QRTab')
-          )}
-          {renderMenuItem(
-            <Text style={{ fontSize: 20 }}>💳</Text>,
-            "Subscription & Billing",
-            "Manage your plan",
-            undefined,
-            () => Alert.alert('Info', 'Billing coming soon!')
-          )}
-          {renderMenuItem(
-            <Text style={{ fontSize: 20 }}>📢</Text>,
-            "Promotions & Offers",
-            "Create special deals",
-            undefined,
-            () => Alert.alert('Info', 'Promotions coming soon!'),
-            true
-          )}
-        </View>
-
-        {/* Settings & Support */}
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionIndicator} />
-          <Text style={styles.sectionTitle}>Settings & Support</Text>
-        </View>
-
-        <View style={styles.menuSection}>
-          {renderMenuItem(
-            <UserIcon color="#4A5568" width={22} height={22} />,
-            "Account Settings",
-            "Update profile & password",
-            undefined,
-            () => Alert.alert('Info', 'Account settings coming soon!')
-          )}
-
-          {renderMenuItem(
-            <Text style={{ fontSize: 20 }}>🎨</Text>,
-            "Appearance",
-            isDark ? "Dark Mode" : "Light Mode",
-            <Switch
-              value={isDark}
-              onValueChange={() => setThemeMode(isDark ? 'light' : 'dark')}
-              trackColor={{ false: "#E2E8F0", true: "#C6F6D5" }}
-              thumbColor={isDark ? "#48BB78" : "#F7FAFC"}
+            <Input
+              label="Restaurant Name"
+              value={restaurantInfo.name}
+              onChangeText={(value) => updateField("name", value)}
+              placeholder="Enter restaurant name"
+              required
             />
-          )}
+            <Input
+              label="Address"
+              value={restaurantInfo.address}
+              onChangeText={(value) => updateField("address", value)}
+              placeholder="Enter full address"
+              multiline
+              numberOfLines={3}
+            />
+            <Input
+              label="Phone"
+              value={restaurantInfo.phone}
+              onChangeText={(value) => updateField("phone", value)}
+              placeholder="Enter contact number"
+              keyboardType="phone-pad"
+            />
+            <Input
+              label="Business Hours"
+              value={restaurantInfo.timing}
+              onChangeText={(value) => updateField("timing", value)}
+              placeholder="Example: 10:00 AM - 11:00 PM"
+            />
+            <Input
+              label="Location"
+              value={restaurantInfo.location}
+              onChangeText={(value) => updateField("location", value)}
+              placeholder="City / area / landmark"
+            />
+            <Input
+              label="Description"
+              value={restaurantInfo.description}
+              onChangeText={(value) => updateField("description", value)}
+              placeholder="Short restaurant description"
+              multiline
+              numberOfLines={4}
+            />
 
-          {renderMenuItem(
-            <Text style={{ fontSize: 20 }}>�</Text>,
-            "Notifications",
-            "Manage alerts",
-            undefined,
-            () => Alert.alert('Info', 'Notification settings coming soon!')
-          )}
+            <View style={styles.buttonRow}>
+              <Button
+                title="Refresh"
+                onPress={handleRefresh}
+                variant="outline"
+                disabled={saving || refreshing}
+                style={styles.secondaryButton}
+              />
+              <Button
+                title="Save Changes"
+                onPress={handleSaveProfile}
+                loading={saving}
+                disabled={refreshing}
+                style={styles.primaryButton}
+              />
+            </View>
+          </View>
 
-          {renderMenuItem(
-            <Text style={{ fontSize: 20 }}>❓</Text>,
-            "Help & Support",
-            "FAQs, Contact us",
-            undefined,
-            () => Alert.alert('Info', 'Support coming soon!')
-          )}
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Workspace</Text>
+              <Text style={styles.sectionSubtitle}>
+                Jump to the tools you use most often.
+              </Text>
+            </View>
 
-          {renderMenuItem(
-            <StarIcon color="#4A5568" width={22} height={22} />,
-            "Rate Our App",
-            "Share your feedback",
-            undefined,
-            () => Alert.alert('Thank you!', 'We appreciate your feedback!'),
-            true
-          )}
-        </View>
+            <View style={styles.actionGrid}>
+              <TouchableOpacity
+                style={styles.actionTile}
+                activeOpacity={0.85}
+                onPress={() => navigation.navigate("DashboardTab")}
+              >
+                <Text style={styles.actionTitle}>Manage Dishes</Text>
+                <Text style={styles.actionSubtitle}>
+                  Add, edit, and organize menu items.
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionTile}
+                activeOpacity={0.85}
+                onPress={() => navigation.navigate("QRTab")}
+              >
+                <Text style={styles.actionTitle}>Generate Menu</Text>
+                <Text style={styles.actionSubtitle}>
+                  Create QR pages and export PDF menus.
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
-        {/* Logout */}
-        <View style={[styles.menuSection, { marginTop: 20, marginBottom: 40 }]}>
-          {renderMenuItem(
-            <LogoutIcon color="#E53E3E" width={22} height={22} />,
-            "Logout",
-            undefined,
-            <ChevronRightIcon color="#E53E3E" width={20} height={20} />,
-            handleLogout,
-            true
-          )}
-        </View>
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Preferences & Security</Text>
+              <Text style={styles.sectionSubtitle}>
+                Manage account appearance and access.
+              </Text>
+            </View>
 
-        <Text style={styles.versionText}>
-          {APP_CONFIG.NAME} v{APP_CONFIG.VERSION}
-        </Text>
+            <View style={styles.preferenceRow}>
+              <View style={styles.preferenceTextWrap}>
+                <Text style={styles.preferenceTitle}>Appearance</Text>
+                <Text style={styles.preferenceSubtitle}>
+                  {isDark ? "Dark mode is active" : "Light mode is active"}
+                </Text>
+              </View>
+              <Switch
+                value={isDark}
+                onValueChange={() => setThemeMode(isDark ? "light" : "dark")}
+                trackColor={{ false: "#E2E8F0", true: "#F5B39B" }}
+                thumbColor={isDark ? "#E8480A" : "#FFFFFF"}
+              />
+            </View>
 
-      </ScrollView>
+            <TouchableOpacity
+              style={styles.preferenceRow}
+              activeOpacity={0.85}
+              onPress={handlePasswordReset}
+              disabled={sendingReset}
+            >
+              <View style={styles.preferenceTextWrap}>
+                <Text style={styles.preferenceTitle}>Password Reset</Text>
+                <Text style={styles.preferenceSubtitle}>
+                  Send a reset email to {userData?.email || "your account"}.
+                </Text>
+              </View>
+              <Text style={styles.preferenceActionText}>
+                {sendingReset ? "Sending..." : "Send Email"}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.preferenceRow, styles.preferenceRowLast]}
+              activeOpacity={0.85}
+              onPress={handleOpenWebsite}
+            >
+              <View style={styles.preferenceTextWrap}>
+                <Text style={styles.preferenceTitle}>Website</Text>
+                <Text style={styles.preferenceSubtitle}>
+                  Open {APP_CONFIG.WEB_URL.replace("https://", "")}
+                </Text>
+              </View>
+              <Text style={styles.preferenceActionText}>Open</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.footerSection}>
+            <Button
+              title="Logout"
+              onPress={handleLogout}
+              variant="danger"
+              style={styles.logoutButton}
+            />
+            <Text style={styles.versionText}>
+              {APP_CONFIG.NAME} v{APP_CONFIG.VERSION}
+            </Text>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
+};
+
+const formatCompactText = (value?: string) => {
+  if (!value) {
+    return "Not set";
+  }
+
+  return value.length > 20 ? `${value.slice(0, 20)}...` : value;
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA'
+    backgroundColor: "#F5F7FB",
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA'
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F5F7FB",
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 40,
   },
   header: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F2F6'
-  },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center'
-  },
-  userInfo: {
-    flex: 1
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2D3748',
-    marginBottom: 4
-  },
-  restaurantName: {
-    fontSize: 14,
-    color: '#718096',
-    fontWeight: '500'
-  },
-  avatarContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#E2E8F0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-    shadowColor: '#000',
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    overflow: "hidden",
+    backgroundColor: "#E8480A",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 2
+    zIndex: 1000,
+    elevation: 5,
+  },
+  headerContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingBottom: 15,
+    justifyContent: "flex-end",
+  },
+  headerTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  headerTextWrap: {
+    flex: 1,
+    paddingRight: 16,
+  },
+  headerEyebrow: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.82)",
+    marginBottom: 4,
+    fontWeight: "700",
+    letterSpacing: 0.4,
+  },
+  headerTitle: {
+    fontSize: 30,
+    fontWeight: "800",
+    lineHeight: 34,
+    color: "#FFFFFF",
+  },
+  headerSubtitle: {
+    fontSize: 15,
+    color: "rgba(255,255,255,0.95)",
+    marginTop: 4,
+    fontWeight: "500",
+  },
+  avatarContainer: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: "#FFF4EF",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.38)",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 5,
   },
   avatarText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#4A5568'
+    color: "#C53D09",
+    fontSize: 18,
+    fontWeight: "800",
+    letterSpacing: 0.6,
   },
-  scrollView: {
-    flex: 1
-  },
-  premiumBanner: {
-    margin: 16,
-    backgroundColor: '#1A202C',
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4
-  },
-  premiumContent: {
-    flexDirection: 'row',
-    alignItems: 'center'
-  },
-  premiumIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12
-  },
-  premiumText: {
-    color: '#F6E05E',
-    fontSize: 16,
-    fontWeight: 'bold'
-  },
-  premiumSubtext: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 12,
-    marginTop: 2
-  },
-  statsRow: {
-    flexDirection: 'row',
+  summaryCardWrap: {
     paddingHorizontal: 16,
-    marginBottom: 24,
-    gap: 12
   },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1
-  },
-  statValue: {
-    fontSize: 20,
-    color: '#2D3748',
-    fontWeight: 'bold',
-    marginBottom: 4
-  },
-  statLabel: {
-    fontSize: 11,
-    color: '#718096',
-    fontWeight: '600',
-    textAlign: 'center'
-  },
-  menuSection: {
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 16,
-    borderRadius: 16,
-    paddingVertical: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-    marginBottom: 24
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F7FAFC'
-  },
-  menuItemLast: {
-    borderBottomWidth: 0
-  },
-  menuIconContainer: {
-    width: 36,
-    height: 36,
+  summaryCard: {
+    backgroundColor: "#FFFFFF",
     borderRadius: 18,
-    backgroundColor: '#F7FAFC',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    elevation: 4,
   },
-  menuContent: {
+  summaryItem: {
     flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center'
   },
-  menuTextContainer: {
-    flex: 1
+  summaryDivider: {
+    width: 1,
+    height: 42,
+    backgroundColor: "#E2E8F0",
+    marginHorizontal: 14,
   },
-  menuTitle: {
+  summaryPrimaryValue: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#0F172A",
+    marginBottom: 4,
+  },
+  summarySecondaryValue: {
     fontSize: 16,
-    color: '#2D3748',
-    fontWeight: '500'
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 4,
   },
-  menuSubtitle: {
+  summaryLabel: {
     fontSize: 12,
-    color: '#718096',
-    marginTop: 2
+    color: "#64748B",
+    fontWeight: "600",
+  },
+  sectionCard: {
+    marginTop: 18,
+    marginHorizontal: 16,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 18,
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.05,
+    shadowRadius: 14,
+    elevation: 3,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 12
-  },
-  sectionIndicator: {
-    width: 3,
-    height: 16,
-    backgroundColor: '#FF6B6B',
-    borderRadius: 2,
-    marginRight: 8
+    marginBottom: 14,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#2D3748'
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#0F172A",
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: "#64748B",
+  },
+  buttonRow: {
+    flexDirection: "row",
+    marginTop: 4,
+  },
+  primaryButton: {
+    flex: 1,
+    marginLeft: 6,
+  },
+  secondaryButton: {
+    flex: 1,
+    marginRight: 6,
+  },
+  actionGrid: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  actionTile: {
+    flex: 1,
+    borderRadius: 16,
+    padding: 16,
+    backgroundColor: "#FFF4EF",
+    borderWidth: 1,
+    borderColor: "#F9D3C5",
+  },
+  actionTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#9A3412",
+    marginBottom: 6,
+  },
+  actionSubtitle: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: "#7C2D12",
+  },
+  preferenceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#EEF2F7",
+  },
+  preferenceRowLast: {
+    borderBottomWidth: 0,
+    paddingBottom: 4,
+  },
+  preferenceTextWrap: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  preferenceTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 4,
+  },
+  preferenceSubtitle: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: "#64748B",
+  },
+  preferenceActionText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#E8480A",
+  },
+  footerSection: {
+    paddingHorizontal: 16,
+    marginTop: 20,
+  },
+  logoutButton: {
+    borderRadius: 16,
   },
   versionText: {
-    textAlign: 'center',
-    color: '#CBD5E0',
+    textAlign: "center",
+    color: "#94A3B8",
     fontSize: 12,
-    marginBottom: 20
-  }
+    marginTop: 14,
+  },
 });
 
 export default ProfileScreen;

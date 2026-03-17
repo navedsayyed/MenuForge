@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8F9FA",
   },
   header: {
-    backgroundColor: "#FF6B6B",
+    backgroundColor: "#E8480A",
     padding: 20,
     paddingTop: 40,
     flexDirection: "row",
@@ -520,8 +520,8 @@ const styles = StyleSheet.create({
     borderColor: "#E9ECEF",
   },
   categoryButtonActive: {
-    backgroundColor: "#FF6B6B",
-    borderColor: "#FF6B6B",
+    backgroundColor: "#E8480A",
+    borderColor: "#E8480A",
   },
   categoryButtonText: {
     fontSize: 14,
@@ -592,12 +592,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   submitButton: {
-    backgroundColor: "#FF6B6B",
+    backgroundColor: "#E8480A",
     borderRadius: 12,
     padding: 16,
     alignItems: "center",
     marginTop: 10,
-    shadowColor: "#FF6B6B",
+    shadowColor: "#E8480A",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

@@ -30,22 +30,25 @@ const DishCard: React.FC<DishCardProps> = ({
   style,
 }) => {
   const imageUrl =
-    dish.images && dish.images.length > 0 ? dish.images.split(",")[0] : null;
-  const [imageError, setImageError] = useState(false);
+    dish.images && dish.images.length > 0 ? dish.images.split(",")[0].trim() : null;
+  const [imageReady, setImageReady] = useState(false);
 
   return (
     <View style={[styles.card, style]}>
       {/* Image Section */}
       <View style={styles.imageContainer}>
-        {imageUrl && !imageError ? (
+        {/* Image renders at full size first so it actually loads */}
+        {imageUrl && (
           <Image
             source={{ uri: imageUrl }}
             style={styles.image}
             resizeMode="cover"
-            onError={() => setImageError(true)}
+            onLoad={() => setImageReady(true)}
           />
-        ) : (
-          <View style={styles.placeholderImage}>
+        )}
+        {/* Placeholder overlays on top until image loads successfully */}
+        {!imageReady && (
+          <View style={styles.placeholderOverlay}>
             <Text style={styles.placeholderText}>🍽️</Text>
           </View>
         )}
@@ -132,9 +135,12 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-  placeholderImage: {
-    width: "100%",
-    height: "100%",
+  placeholderOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: "#F8F9FA",
     justifyContent: "center",
     alignItems: "center",
@@ -172,7 +178,7 @@ const styles = StyleSheet.create({
   },
   category: {
     fontSize: 14,
-    color: "#FF6B6B",
+    color: "#E8480A",
     fontWeight: "600",
     marginBottom: 8,
   },
@@ -212,7 +218,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8F9FA",
   },
   deleteButton: {
-    backgroundColor: "#FFF5F5",
+    backgroundColor: "#FFF1EB",
     borderRightWidth: 0,
   },
 });

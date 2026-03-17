@@ -151,12 +151,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15
   },
   inputContainerFocused: {
-    borderColor: '#FF6B6B',
+    borderColor: '#E8480A',
     backgroundColor: '#FFFFFF'
   },
   inputContainerError: {
     borderColor: '#E74C3C',
-    backgroundColor: '#FFF5F5'
+    backgroundColor: '#FFF1EB'
   },
   inputContainerDisabled: {
     backgroundColor: '#ECF0F1',
