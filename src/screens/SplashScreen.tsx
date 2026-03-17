@@ -45,13 +45,13 @@ const SplashScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      <StatusBar barStyle="light-content" backgroundColor="#FF6B6B" />
+      <StatusBar barStyle="light-content" backgroundColor="#E8480A" />
 
       <View style={styles.contentContainer}>
         <View style={styles.logoContainer}>
           <Image source={LogoPng} style={styles.logoFallback} />
-          <Text style={styles.appName}>Restaurant Admin</Text>
-          <Text style={styles.tagline}>Manage your dishes with ease</Text>
+          <Text style={styles.appName}>MenuForge</Text>
+          <Text style={styles.tagline}>Forge your perfect menu</Text>
         </View>
 
         <View style={styles.loaderContainer}>
@@ -70,7 +70,7 @@ const SplashScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FF6B6B",
+    backgroundColor: "#E8480A",
   },
   contentContainer: {
     flex: 1,
