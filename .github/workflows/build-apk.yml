@@ -71,12 +71,12 @@ jobs:
         run: |
           ls -lh android/app/build/outputs/apk/release/
 
-      - name: Create Public Release on App-Releases Repo
+      - name: Create Public Release on MenuForge-Releases Repo
         uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         with:
-          repository: navedsayyed/App-Releases
+          repository: navedsayyed/MenuForge-Releases
           tag_name: restaurant-admin-v${{ steps.version.outputs.date }}-${{ steps.version.outputs.time }}
           name: Restaurant Admin v${{ steps.version.outputs.date }}
           body: |
@@ -135,16 +135,16 @@ jobs:
           echo "### 🌐 PUBLIC Download Links:" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Share these with ANYONE:**" >> $GITHUB_STEP_SUMMARY
-          echo "- 📱 Latest Release: https://github.com/navedsayyed/App-Releases/releases?q=restaurant-admin&expanded=true" >> $GITHUB_STEP_SUMMARY
+          echo "- 📱 Latest Release: https://github.com/navedsayyed/MenuForge-Releases/releases?q=restaurant-admin&expanded=true" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Direct Download Links (choose one):**" >> $GITHUB_STEP_SUMMARY
-          echo "- 🔗 arm64-v8a (most phones): https://github.com/navedsayyed/App-Releases/releases/download/restaurant-admin-v${{ steps.version.outputs.date }}-${{ steps.version.outputs.time }}/app-arm64-v8a-release.apk" >> $GITHUB_STEP_SUMMARY
-          echo "- 🔗 armeabi-v7a (older): https://github.com/navedsayyed/App-Releases/releases/download/restaurant-admin-v${{ steps.version.outputs.date }}-${{ steps.version.outputs.time }}/app-armeabi-v7a-release.apk" >> $GITHUB_STEP_SUMMARY
-          echo "- 📚 All Apps: https://github.com/navedsayyed/App-Releases/releases" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔗 arm64-v8a (most phones): https://github.com/navedsayyed/MenuForge-Releases/releases/download/restaurant-admin-v${{ steps.version.outputs.date }}-${{ steps.version.outputs.time }}/app-arm64-v8a-release.apk" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔗 armeabi-v7a (older): https://github.com/navedsayyed/MenuForge-Releases/releases/download/restaurant-admin-v${{ steps.version.outputs.date }}-${{ steps.version.outputs.time }}/app-armeabi-v7a-release.apk" >> $GITHUB_STEP_SUMMARY
+          echo "- 📚 All Apps: https://github.com/navedsayyed/MenuForge-Releases/releases" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ -f android/app/build/outputs/apk/release/app-arm64-v8a-release.apk ]; then
             ls -lh android/app/build/outputs/apk/release/app-*.apk | awk '{print "- " $9 ": " $5}' >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "🔒 Your code stays PRIVATE in Restaurant Admin repo" >> $GITHUB_STEP_SUMMARY
-          echo "🌐 APK is PUBLIC in App-Releases repo" >> $GITHUB_STEP_SUMMARY
+          echo "🌐 APK is PUBLIC in MenuForge-Releases repo" >> $GITHUB_STEP_SUMMARY
